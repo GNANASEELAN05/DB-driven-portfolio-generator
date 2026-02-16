@@ -13,64 +13,64 @@ const authHeader = () => ({
 /* =========================
    VIEWER (PUBLIC GETs)
 ========================= */
-export const getProfile = () => http.get("/api/portfolio/profile");
-export const getSkills = () => http.get("/api/portfolio/skills");
-export const getFeaturedProjects = () => http.get("/api/projects/featured");
-export const getExperience = () => http.get("/api/portfolio/experience");
-export const getEducation = () => http.get("/api/portfolio/education");
-export const getSocials = () => http.get("/api/portfolio/socials");
-export const getAchievements = () => http.get("/api/portfolio/achievements");
-export const getLanguageExperience = () => http.get("/api/portfolio/languages");
+export const getProfile = () => http.get("/portfolio/profile");
+export const getSkills = () => http.get("/portfolio/skills");
+export const getFeaturedProjects = () => http.get("/projects/featured");
+export const getExperience = () => http.get("/portfolio/experience");
+export const getEducation = () => http.get("/portfolio/education");
+export const getSocials = () => http.get("/portfolio/socials");
+export const getAchievements = () => http.get("/portfolio/achievements");
+export const getLanguageExperience = () => http.get("/portfolio/languages");
 
 /* =========================
    ADMIN (Portfolio PUTs)
 ========================= */
 export const updateProfile = (payload) =>
-  http.put("/api/portfolio/profile", payload, authHeader());
+  http.put("/portfolio/profile", payload, authHeader());
 
 export const updateSkills = (payload) =>
-  http.put("/api/portfolio/skills", payload, authHeader());
+  http.put("/portfolio/skills", payload, authHeader());
 
 export const updateSocials = (payload) =>
-  http.put("/api/portfolio/socials", payload, authHeader());
+  http.put("/portfolio/socials", payload, authHeader());
 
 export const saveAchievements = (payload) =>
-  http.put("/api/portfolio/achievements", payload, authHeader());
+  http.put("/portfolio/achievements", payload, authHeader());
 
 export const saveLanguageExperience = (payload) =>
-  http.put("/api/portfolio/languages", payload, authHeader());
+  http.put("/portfolio/languages", payload, authHeader());
 
 export const updateEducation = (payload) =>
-  http.put("/api/portfolio/education", payload, authHeader());
+  http.put("/portfolio/education", payload, authHeader());
 
 export const updateExperience = (payload) =>
-  http.put("/api/portfolio/experience", payload, authHeader());
+  http.put("/portfolio/experience", payload, authHeader());
 
 /* =========================
    ADMIN (Projects)
 ========================= */
 export const getAllProjectsAdmin = () =>
-  http.get("/api/projects", authHeader());
+  http.get("/projects", authHeader());
 
 export const createProject = (payload) =>
-  http.post("/api/projects", payload, authHeader());
+  http.post("/projects", payload, authHeader());
 
 export const updateProject = (id, payload) =>
-  http.put(`/api/projects/${id}`, payload, authHeader());
+  http.put(`/projects/${id}`, payload, authHeader());
 
 export const deleteProject = (id) =>
-  http.delete(`/api/projects/${id}`, authHeader());
+  http.delete(`/projects/${id}`, authHeader());
 
 /* =========================
    RESUME SECTION
 ========================= */
 
-// upload resume (IMPORTANT FIX)
+// upload resume
 export const uploadResume = (file) => {
   const form = new FormData();
   form.append("file", file);
 
-  return http.post("/api/resume/upload", form, {
+  return http.post("/resume/upload", form, {
     headers: {
       Authorization: `Bearer ${localStorage.getItem("token")}`,
       "Content-Type": "multipart/form-data",
@@ -80,29 +80,29 @@ export const uploadResume = (file) => {
 
 // viewer download
 export const downloadResumeUrl = () =>
-  `${http.defaults.baseURL}/api/resume/download`;
+  `${http.defaults.baseURL}/resume/download`;
 
 export const viewResumeUrl = () =>
-  `${http.defaults.baseURL}/api/resume/download`;
+  `${http.defaults.baseURL}/resume/download`;
 
 // admin list
 export const listResumesAdmin = () =>
-  http.get("/api/resume/list", authHeader());
+  http.get("/resume/list", authHeader());
 
 // preview by id
 export const viewResumeByIdUrl = (id) =>
-  `${http.defaults.baseURL}/api/resume/${id}/view`;
+  `${http.defaults.baseURL}/resume/${id}/view`;
 
 // set primary resume
 export const setPrimaryResume = (id) =>
-  http.put(`/api/resume/${id}/primary`, {}, authHeader());
+  http.put(`/resume/${id}/primary`, {}, authHeader());
 
 // delete resume
 export const deleteResumeById = (id) =>
-  http.delete(`/api/resume/${id}`, authHeader());
+  http.delete(`/resume/${id}`, authHeader());
 
 /* =========================
    AUTH
 ========================= */
 export const adminLogin = (username, password) =>
-  http.post("/api/auth/login", { username, password });
+  http.post("/auth/login", { username, password });

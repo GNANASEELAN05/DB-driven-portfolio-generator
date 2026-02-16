@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const API = axios.create({
-  baseURL: "http://localhost:8080/api",
+  baseURL: "https://portfolio-backend-cok2.onrender.com/api",
 });
 
 // attach JWT automatically (token optional)
