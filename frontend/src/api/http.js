@@ -2,7 +2,7 @@
 import axios from "axios";
 
 const baseURL =
-  import.meta.env.VITE_API_BASE_URL ||
+  import.meta.env.VITE_API_URL ||
   "https://portfolio-backend-cok2.onrender.com/api";
 
 // create instance
