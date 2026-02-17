@@ -939,6 +939,25 @@ useEffect(() => {
                       <MdEmail />
                     </IconButton>
                   </Tooltip>
+                  {/* ✅ ADDED: Website icon (same style as others) */}
+                      <Tooltip title="Website">
+                        <IconButton
+                          onClick={() => socials?.website && window.open(socials.website, "_blank")}
+                          sx={{
+                            borderRadius: 3,
+                            background: `linear-gradient(135deg, ${BRAND_PRIMARY}, ${BRAND_DARK})`,
+                            color: "#0b0b0e",
+                            boxShadow: "0 10px 30px rgba(122,63,145,0.25)",
+                            transition: "transform 160ms ease, box-shadow 160ms ease",
+                            "&:hover": {
+                              transform: "translateY(-2px)",
+                              boxShadow: "0 16px 45px rgba(122,63,145,0.35)",
+                            },
+                          }}
+                        >
+                          <MdLink />
+                        </IconButton>
+                      </Tooltip>
 
                   <Tooltip title="Phone">
                     <IconButton
