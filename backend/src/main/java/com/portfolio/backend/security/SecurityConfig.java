@@ -37,7 +37,7 @@ public class SecurityConfig {
             .cors(Customizer.withDefaults())
             .csrf(csrf -> csrf.disable())
 
-            // iframe preview fix
+            // allow iframe preview
             .headers(headers -> headers.frameOptions(frame -> frame.disable()))
 
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -47,15 +47,15 @@ public class SecurityConfig {
                 // preflight
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                // auth
+                // auth login
                 .requestMatchers("/api/auth/**").permitAll()
 
-                // public viewer
+                // ===== PUBLIC VIEWER =====
                 .requestMatchers(HttpMethod.GET, "/api/portfolio/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/projects/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/resume/**").permitAll()
 
-                // admin writes
+                // ===== ADMIN =====
                 .requestMatchers(HttpMethod.POST, "/api/projects/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PUT,  "/api/projects/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE,"/api/projects/**").hasRole("ADMIN")
@@ -75,19 +75,20 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // CORS
+    // 🌍 CORS FOR LOCAL + VERCEL LIVE
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration cfg = new CorsConfiguration();
 
         cfg.setAllowedOrigins(List.of(
             "http://localhost:5173",
-            "http://127.0.0.1:5173"
+            "http://127.0.0.1:5173",
+            "https://gnanaseelan-v-portfolio.vercel.app"
         ));
 
-        cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        cfg.setAllowedHeaders(List.of("Authorization", "Content-Type"));
-        cfg.setExposedHeaders(List.of("Content-Disposition"));
+        // allow everything needed for admin + viewer
+        cfg.addAllowedHeader("*");
+        cfg.addAllowedMethod("*");
         cfg.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
