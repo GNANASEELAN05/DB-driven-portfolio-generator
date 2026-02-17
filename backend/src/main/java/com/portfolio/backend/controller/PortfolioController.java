@@ -74,7 +74,7 @@ public class PortfolioController {
         return languageRepo.findAll();
     }
 
-    // ====================== PROFILE SAVE ======================
+    // ====================== PROFILE ======================
 
     @PutMapping("/profile")
     @Transactional
@@ -105,26 +105,45 @@ public class PortfolioController {
     @Transactional
     public PortfolioSkills saveSkills(@RequestBody PortfolioSkills req) {
 
-        skillsRepo.deleteAll();
-        skillsRepo.flush(); // ⭐ IMPORTANT
+        Optional<PortfolioSkills> existing = skillsRepo.findAll().stream().findFirst();
+        PortfolioSkills skills;
 
-        if (req == null) return new PortfolioSkills();
+        if (existing.isPresent()) {
+            skills = existing.get();
+            skills.setFrontend(req.getFrontend());
+            skills.setBackend(req.getBackend());
+            skills.setDatabase(req.getDatabase());
+            skills.setTools(req.getTools());
+        } else {
+            skills = req;
+        }
 
-        return skillsRepo.save(req);
+        return skillsRepo.save(skills);
     }
 
-    // ====================== SOCIALS ======================
+    // ====================== SOCIALS (FIXED) ======================
 
     @PutMapping("/socials")
     @Transactional
     public SocialLinks saveSocials(@RequestBody SocialLinks req) {
 
-        socialsRepo.deleteAll();
-        socialsRepo.flush();
+        Optional<SocialLinks> existingOpt = socialsRepo.findAll().stream().findFirst();
+        SocialLinks socials;
 
-        if (req == null) return new SocialLinks();
+        if (existingOpt.isPresent()) {
+            socials = existingOpt.get();
+            socials.setGithub(req.getGithub());
+            socials.setLinkedin(req.getLinkedin());
+            socials.setEmail(req.getEmail());
+            socials.setPhone(req.getPhone());
+            socials.setWebsite(req.getWebsite());
+            socials.setCtaTitle(req.getCtaTitle());
+            socials.setCtaSubtitle(req.getCtaSubtitle());
+        } else {
+            socials = req;
+        }
 
-        return socialsRepo.save(req);
+        return socialsRepo.save(socials);
     }
 
     // ====================== EDUCATION ======================
@@ -132,12 +151,8 @@ public class PortfolioController {
     @PutMapping("/education")
     @Transactional
     public List<EducationItem> saveEducation(@RequestBody List<EducationItem> items) {
-
         eduRepo.deleteAll();
-        eduRepo.flush();
-
-        if (items == null || items.isEmpty()) return List.of();
-
+        if (items == null) return List.of();
         return eduRepo.saveAll(items);
     }
 
@@ -146,12 +161,8 @@ public class PortfolioController {
     @PutMapping("/experience")
     @Transactional
     public List<ExperienceItem> saveExperience(@RequestBody List<ExperienceItem> items) {
-
         expRepo.deleteAll();
-        expRepo.flush();
-
-        if (items == null || items.isEmpty()) return List.of();
-
+        if (items == null) return List.of();
         return expRepo.saveAll(items);
     }
 
@@ -160,12 +171,8 @@ public class PortfolioController {
     @PutMapping("/achievements")
     @Transactional
     public List<AchievementItem> saveAchievements(@RequestBody List<AchievementItem> items) {
-
         achievementRepo.deleteAll();
-        achievementRepo.flush();
-
-        if (items == null || items.isEmpty()) return List.of();
-
+        if (items == null) return List.of();
         return achievementRepo.saveAll(items);
     }
 
@@ -174,12 +181,8 @@ public class PortfolioController {
     @PutMapping("/languages")
     @Transactional
     public List<LanguageExperienceItem> saveLanguages(@RequestBody List<LanguageExperienceItem> items) {
-
         languageRepo.deleteAll();
-        languageRepo.flush();
-
-        if (items == null || items.isEmpty()) return List.of();
-
+        if (items == null) return List.of();
         return languageRepo.saveAll(items);
     }
 }
