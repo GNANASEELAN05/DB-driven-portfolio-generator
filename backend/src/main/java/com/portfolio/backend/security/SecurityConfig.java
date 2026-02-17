@@ -1,5 +1,6 @@
 package com.portfolio.backend.security;
 
+import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -34,30 +35,28 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
         http
-            // ✅ CORS MUST be enabled in Spring Security
             .cors(Customizer.withDefaults())
-
             .csrf(csrf -> csrf.disable())
 
-            // ✅ IMPORTANT FOR RESUME PREVIEW IN IFRAME
+            // iframe preview fix
             .headers(headers -> headers.frameOptions(frame -> frame.disable()))
 
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
             .authorizeHttpRequests(auth -> auth
 
-                // ✅ VERY IMPORTANT: allow preflight
+                // preflight
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                // AUTH
+                // auth
                 .requestMatchers("/api/auth/**").permitAll()
 
-                // ===== PUBLIC VIEWER =====
+                // public viewer
                 .requestMatchers(HttpMethod.GET, "/api/portfolio/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/projects/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/resume/**").permitAll()
 
-                // ===== ADMIN WRITES =====
+                // admin writes
                 .requestMatchers(HttpMethod.POST, "/api/projects/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PUT,  "/api/projects/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE,"/api/projects/**").hasRole("ADMIN")
@@ -77,12 +76,11 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // ✅ CORS config used by Spring Security (this is the real one that matters)
+    // CORS
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration cfg = new CorsConfiguration();
 
-        // Your frontend origin(s)
         cfg.setAllowedOrigins(List.of(
             "http://localhost:5173",
             "http://127.0.0.1:5173"
@@ -90,7 +88,7 @@ public class SecurityConfig {
 
         cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         cfg.setAllowedHeaders(List.of("Authorization", "Content-Type"));
-        cfg.setExposedHeaders(List.of("Content-Disposition")); // useful for downloads
+        cfg.setExposedHeaders(List.of("Content-Disposition"));
         cfg.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
@@ -106,5 +104,13 @@ public class SecurityConfig {
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration cfg) throws Exception {
         return cfg.getAuthenticationManager();
+    }
+
+    // 🔥 TEMPORARY: generate bcrypt password in render logs
+    @Bean
+    public CommandLineRunner generatePassword(PasswordEncoder encoder) {
+        return args -> {
+            System.out.println("🔥 BCRYPT PASSWORD = " + encoder.encode("GnanaV@3791"));
+        };
     }
 }
