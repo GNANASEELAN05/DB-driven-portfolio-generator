@@ -37,7 +37,7 @@ public class PortfolioController {
         this.languageRepo = languageRepo;
     }
 
-    // ====================== PUBLIC GETs ======================
+    // ====================== GET ======================
 
     @GetMapping("/profile")
     public PortfolioProfile getProfile() {
@@ -74,7 +74,7 @@ public class PortfolioController {
         return languageRepo.findAll();
     }
 
-    // ====================== PROFILE SAVE (🔥 FIXED SAFE) ======================
+    // ====================== PROFILE SAVE ======================
 
     @PutMapping("/profile")
     @Transactional
@@ -84,9 +84,7 @@ public class PortfolioController {
         PortfolioProfile profile;
 
         if (existingOpt.isPresent()) {
-            // update existing row safely (NO DELETE)
             profile = existingOpt.get();
-
             profile.setName(req.getName());
             profile.setTitle(req.getTitle());
             profile.setTagline(req.getTagline());
@@ -94,36 +92,38 @@ public class PortfolioController {
             profile.setLocation(req.getLocation());
             profile.setEmailPublic(req.getEmailPublic());
             profile.setInitials(req.getInitials());
-
         } else {
-            // first time insert
             profile = req;
         }
 
         return profileRepo.save(profile);
     }
 
-    // ====================== SKILLS SAVE ======================
+    // ====================== SKILLS ======================
 
     @PutMapping("/skills")
+    @Transactional
     public PortfolioSkills saveSkills(@RequestBody PortfolioSkills req) {
 
-        System.out.println("=== SAVING SKILLS ===");
-
         skillsRepo.deleteAll();
+        skillsRepo.flush(); // ⭐ IMPORTANT
 
-        PortfolioSkills saved = skillsRepo.save(req);
+        if (req == null) return new PortfolioSkills();
 
-        System.out.println("Saved skills ID: " + saved.getId());
-
-        return saved;
+        return skillsRepo.save(req);
     }
 
     // ====================== SOCIALS ======================
 
     @PutMapping("/socials")
+    @Transactional
     public SocialLinks saveSocials(@RequestBody SocialLinks req) {
+
         socialsRepo.deleteAll();
+        socialsRepo.flush();
+
+        if (req == null) return new SocialLinks();
+
         return socialsRepo.save(req);
     }
 
@@ -161,15 +161,10 @@ public class PortfolioController {
     @Transactional
     public List<AchievementItem> saveAchievements(@RequestBody List<AchievementItem> items) {
 
-        System.out.println("=== ACHIEVEMENTS SAVE CALLED ===");
-
         achievementRepo.deleteAll();
         achievementRepo.flush();
 
-        if (items == null || items.isEmpty()) {
-            System.out.println("All achievements deleted");
-            return List.of();
-        }
+        if (items == null || items.isEmpty()) return List.of();
 
         return achievementRepo.saveAll(items);
     }
@@ -180,15 +175,10 @@ public class PortfolioController {
     @Transactional
     public List<LanguageExperienceItem> saveLanguages(@RequestBody List<LanguageExperienceItem> items) {
 
-        System.out.println("=== LANGUAGE SAVE CALLED ===");
-
         languageRepo.deleteAll();
         languageRepo.flush();
 
-        if (items == null || items.isEmpty()) {
-            System.out.println("All languages deleted");
-            return List.of();
-        }
+        if (items == null || items.isEmpty()) return List.of();
 
         return languageRepo.saveAll(items);
     }
