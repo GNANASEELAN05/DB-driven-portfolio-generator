@@ -1,6 +1,5 @@
 package com.portfolio.backend.security;
 
-import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -104,13 +103,5 @@ public class SecurityConfig {
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration cfg) throws Exception {
         return cfg.getAuthenticationManager();
-    }
-
-    // 🔥 TEMPORARY: generate bcrypt password in render logs
-    @Bean
-    public CommandLineRunner generatePassword(PasswordEncoder encoder) {
-        return args -> {
-            System.out.println("🔥 BCRYPT PASSWORD = " + encoder.encode("GnanaV@3791"));
-        };
     }
 }
