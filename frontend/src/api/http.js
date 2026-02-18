@@ -2,14 +2,13 @@
 import axios from "axios";
 
 /*
-  🔥 IMPORTANT:
-  For LOCAL running → uses http://localhost:8080/api
-  For deployment → set VITE_API_URL in .env
+  Uses production backend on Vercel
+  Falls back to localhost for local dev
 */
 
 const baseURL =
-  import.meta.env.VITE_API_URL ||
-  "https://db-driven-portfolio-generator-backend.onrender.com/api";   // ✅ LOCAL BACKEND
+  import.meta.env.VITE_API_BASE_URL ||
+  "https://db-driven-portfolio-generator-backend.onrender.com/api";
 
 // axios instance
 const http = axios.create({
@@ -21,12 +20,10 @@ http.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
 
-    // remove old header
     if (config.headers?.Authorization) {
       delete config.headers.Authorization;
     }
 
-    // attach fresh token
     if (token) {
       config.headers = config.headers || {};
       config.headers.Authorization = `Bearer ${token}`;
@@ -41,23 +38,22 @@ http.interceptors.request.use(
 http.interceptors.response.use(
   (res) => res,
   (error) => {
-    if (error?.response?.status === 401) {
-      const authUser = localStorage.getItem("auth_user") || "";
 
-      // clear session
+    // ❗ DO NOT redirect on login/register failure
+    const requestURL = error?.config?.url || "";
+
+    const isAuthRequest =
+      requestURL.includes("/api/auth/login") ||
+      requestURL.includes("/api/auth/register");
+
+    if (error?.response?.status === 401 && !isAuthRequest) {
+      // only for token expired AFTER login
+
       localStorage.removeItem("token");
       sessionStorage.clear();
 
-      // try to keep same username login page
-      const path = window.location.pathname || "/";
-      const firstSeg = path.split("/").filter(Boolean)[0] || authUser;
-      const u = (firstSeg || authUser || "").trim();
-
-      if (u) {
-        window.location.href = `/${u}/adminpanel/login`;
-      } else {
-        window.location.href = "/register";
-      }
+      // go to common login page
+      window.location.href = "/adminpanel/login";
     }
 
     return Promise.reject(error);

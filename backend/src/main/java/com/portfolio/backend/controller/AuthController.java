@@ -33,50 +33,61 @@ public class AuthController {
         this.passwordEncoder = passwordEncoder;
     }
 
-    // ================= REGISTER (CREATE ACCOUNT) =================
+    // ================= REGISTER =================
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest req) {
 
-        String username = req.getUsername() == null ? "" : req.getUsername().trim().toLowerCase();
+        String rawUsername = req.getUsername() == null ? "" : req.getUsername().trim();
+        String usernameLower = rawUsername.toLowerCase();
         String password = req.getPassword() == null ? "" : req.getPassword();
 
-        if (username.isBlank() || password.isBlank()) {
-            return ResponseEntity.badRequest().body("Username and password are required");
+        if (rawUsername.isBlank() || password.isBlank()) {
+            return ResponseEntity.badRequest().body("Username and password required");
         }
 
-        if (username.length() < 3 || username.length() > 30) {
-            return ResponseEntity.badRequest().body("Username must be 3-30 characters");
+        if (rawUsername.length() < 3 || rawUsername.length() > 40) {
+            return ResponseEntity.badRequest().body("Username must be 3-40 characters");
         }
 
-        // allow only safe URL usernames
-        if (!username.matches("^[a-z0-9](?:[a-z0-9._-]{1,28}[a-z0-9])?$")) {
-            return ResponseEntity.badRequest().body("Username contains invalid characters");
+        // ✔ allow spaces + capital + small letters
+        if (!rawUsername.matches("^[A-Za-z0-9 ._-]+$")) {
+            return ResponseEntity.badRequest()
+                    .body("Username can contain letters, numbers, space, . _ -");
         }
 
-        if (userRepository.findByUsername(username).isPresent()) {
+        // check duplicate (case insensitive)
+        if (userRepository.findByUsernameIgnoreCase(usernameLower).isPresent()) {
             return ResponseEntity.status(409).body("Username already exists");
         }
 
-        // Each registered user gets their own admin dashboard, so keep role as ADMIN
         User u = new User();
-        u.setUsername(username);
+        u.setUsername(rawUsername); // store ORIGINAL
         u.setPassword(passwordEncoder.encode(password));
         u.setRole("ADMIN");
         userRepository.save(u);
 
-        // auto-login after register (optional but useful)
-        String token = jwtService.generateToken(username, "ROLE_ADMIN");
+        String token = jwtService.generateToken(rawUsername, "ROLE_ADMIN");
         return ResponseEntity.ok(new LoginResponse(token));
     }
 
-    // ================= ADMIN LOGIN =================
+    // ================= LOGIN =================
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest req) {
+
+        String inputUsername = req.getUsername().trim();
+        String lower = inputUsername.toLowerCase();
+
+        User user = userRepository.findByUsernameIgnoreCase(lower)
+                .orElse(null);
+
+        if (user == null) {
+            return ResponseEntity.status(401).body("Invalid username or password");
+        }
 
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
-                            req.getUsername(),
+                            user.getUsername(),   // use stored username
                             req.getPassword()
                     )
             );
@@ -84,32 +95,11 @@ public class AuthController {
             return ResponseEntity.status(401).body("Invalid username or password");
         }
 
-        User user = userRepository.findByUsername(req.getUsername())
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
         String role = user.getRole();
-        if (!role.startsWith("ROLE_")) {
-            role = "ROLE_" + role;
-        }
+        if (!role.startsWith("ROLE_")) role = "ROLE_" + role;
 
         String token = jwtService.generateToken(user.getUsername(), role);
-
         return ResponseEntity.ok(new LoginResponse(token));
-    }
-
-    // ================= HASH PASSWORD ONLY ONCE =================
-    @GetMapping("/hash-admin-once")
-    public String hashAdminOnce(@RequestParam String username,
-                                @RequestParam String newpass) {
-
-        User u = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        String encoded = passwordEncoder.encode(newpass);
-        u.setPassword(encoded);
-        userRepository.save(u);
-
-        return "Admin password hashed & saved successfully";
     }
 
     // ================= LOGIN TEST =================
@@ -117,23 +107,23 @@ public class AuthController {
     public String loginTest(@RequestParam String username,
                             @RequestParam String password) {
 
+        User user = userRepository.findByUsernameIgnoreCase(username.trim().toLowerCase())
+                .orElse(null);
+
+        if (user == null) return "LOGIN FAILED ❌";
+
         try {
             authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(username, password)
+                    new UsernamePasswordAuthenticationToken(user.getUsername(), password)
             );
         } catch (Exception e) {
             return "LOGIN FAILED ❌";
         }
 
-        User u = userRepository.findByUsername(username).orElseThrow();
+        String role = user.getRole();
+        if (!role.startsWith("ROLE_")) role = "ROLE_" + role;
 
-        String role = u.getRole();
-        if (!role.startsWith("ROLE_")) {
-            role = "ROLE_" + role;
-        }
-
-        String token = jwtService.generateToken(u.getUsername(), role);
-
+        String token = jwtService.generateToken(user.getUsername(), role);
         return "LOGIN SUCCESS ✅ TOKEN:\n" + token;
     }
 }
