@@ -4,12 +4,24 @@ import jakarta.persistence.*;
 import java.time.Instant;
 
 @Entity
-@Table(name = "projects")
+@Table(
+        name = "projects",
+        indexes = {
+                @Index(name = "idx_project_owner", columnList = "ownerUsername"),
+                @Index(name = "idx_project_featured", columnList = "ownerUsername,featured,updatedAt")
+        }
+)
 public class Project {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    /**
+     * Multi-tenant key
+     */
+    @Column(nullable = false)
+    private String ownerUsername;
 
     private String title;
 
@@ -22,49 +34,42 @@ public class Project {
     // frontend: liveUrl
     private String liveUrl;
 
-    // frontend: tech (comma separated)
+    // tech stack (string list)
     @Column(length = 2000)
     private String tech;
 
-    // frontend: status (Live / Draft / In Progress)
-    private String status;
+    private String status; // e.g., "Completed", "In Progress"
 
-    private Boolean featured = true;
+    private Boolean featured = false;
 
     private Instant updatedAt = Instant.now();
-
-    public Project() {}
 
     @PrePersist
     @PreUpdate
     public void touch() {
         this.updatedAt = Instant.now();
-        if (this.featured == null) this.featured = true;
     }
 
     public Long getId() { return id; }
 
+    public String getOwnerUsername() { return ownerUsername; }
+    public void setOwnerUsername(String ownerUsername) { this.ownerUsername = ownerUsername; }
+
     public String getTitle() { return title; }
-    public void setTitle(String title) { this.title = title; }
-
     public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
-
     public String getRepoUrl() { return repoUrl; }
-    public void setRepoUrl(String repoUrl) { this.repoUrl = repoUrl; }
-
     public String getLiveUrl() { return liveUrl; }
-    public void setLiveUrl(String liveUrl) { this.liveUrl = liveUrl; }
-
     public String getTech() { return tech; }
-    public void setTech(String tech) { this.tech = tech; }
-
     public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
-
     public Boolean getFeatured() { return featured; }
-    public void setFeatured(Boolean featured) { this.featured = featured; }
-
     public Instant getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
+
+    public void setId(Long id) { this.id = id; }
+    public void setTitle(String title) { this.title = title; }
+    public void setDescription(String description) { this.description = description; }
+    public void setRepoUrl(String repoUrl) { this.repoUrl = repoUrl; }
+    public void setLiveUrl(String liveUrl) { this.liveUrl = liveUrl; }
+    public void setTech(String tech) { this.tech = tech; }
+    public void setStatus(String status) { this.status = status; }
+    public void setFeatured(Boolean featured) { this.featured = featured; }
 }

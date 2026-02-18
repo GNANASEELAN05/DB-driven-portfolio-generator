@@ -1,21 +1,27 @@
 // src/api/http.js
 import axios from "axios";
 
+/*
+  🔥 IMPORTANT:
+  For LOCAL running → uses http://localhost:8080/api
+  For deployment → set VITE_API_URL in .env
+*/
+
 const baseURL =
   import.meta.env.VITE_API_URL ||
-  "https://portfolio-backend-cok2.onrender.com/api";
+  "http://localhost:8080/api";   // ✅ LOCAL BACKEND
 
-// create instance
+// axios instance
 const http = axios.create({
   baseURL,
 });
 
-// 🔥 ALWAYS attach latest token dynamically
+// ================= REQUEST INTERCEPTOR =================
 http.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
 
-    // remove old header first
+    // remove old header
     if (config.headers?.Authorization) {
       delete config.headers.Authorization;
     }
@@ -31,17 +37,29 @@ http.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// 🔥 AUTO LOGOUT IF TOKEN INVALID
+// ================= RESPONSE INTERCEPTOR =================
 http.interceptors.response.use(
   (res) => res,
   (error) => {
     if (error?.response?.status === 401) {
+      const authUser = localStorage.getItem("auth_user") || "";
+
+      // clear session
       localStorage.removeItem("token");
       sessionStorage.clear();
 
-      // redirect to login instantly
-      window.location.href = "/admin-login";
+      // try to keep same username login page
+      const path = window.location.pathname || "/";
+      const firstSeg = path.split("/").filter(Boolean)[0] || authUser;
+      const u = (firstSeg || authUser || "").trim();
+
+      if (u) {
+        window.location.href = `/${u}/adminpanel/login`;
+      } else {
+        window.location.href = "/register";
+      }
     }
+
     return Promise.reject(error);
   }
 );

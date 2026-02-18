@@ -2,13 +2,17 @@ package com.portfolio.backend.controller;
 
 import com.portfolio.backend.model.*;
 import com.portfolio.backend.repository.*;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.*;
 
 @RestController
-@RequestMapping("/api/portfolio")
+@RequestMapping("/api/u/{username}/portfolio")
 public class PortfolioController {
 
     private final PortfolioProfileRepository profileRepo;
@@ -37,152 +41,167 @@ public class PortfolioController {
         this.languageRepo = languageRepo;
     }
 
-    // ====================== GET ======================
+    // ====================== helpers ======================
+
+    private String norm(String username) {
+        return username == null ? "" : username.trim().toLowerCase();
+    }
+
+    private void assertOwner(String username) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || auth.getName() == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized");
+        }
+        String current = auth.getName().trim().toLowerCase();
+        if (!current.equals(norm(username))) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not your portfolio");
+        }
+    }
+
+    // ====================== PUBLIC GETs ======================
 
     @GetMapping("/profile")
-    public PortfolioProfile getProfile() {
-        return profileRepo.findAll().stream().findFirst().orElse(new PortfolioProfile());
+    public PortfolioProfile getProfile(@PathVariable String username) {
+        return profileRepo.findFirstByOwnerUsername(norm(username)).orElse(null);
     }
 
     @GetMapping("/skills")
-    public PortfolioSkills getSkills() {
-        return skillsRepo.findAll().stream().findFirst().orElse(new PortfolioSkills());
-    }
-
-    @GetMapping("/experience")
-    public List<ExperienceItem> getExperience() {
-        return expRepo.findAll();
-    }
-
-    @GetMapping("/education")
-    public List<EducationItem> getEducation() {
-        return eduRepo.findAll();
+    public PortfolioSkills getSkills(@PathVariable String username) {
+        return skillsRepo.findFirstByOwnerUsername(norm(username)).orElse(null);
     }
 
     @GetMapping("/socials")
-    public SocialLinks getSocials() {
-        return socialsRepo.findAll().stream().findFirst().orElse(new SocialLinks());
+    public SocialLinks getSocials(@PathVariable String username) {
+        return socialsRepo.findFirstByOwnerUsername(norm(username)).orElse(null);
     }
 
     @GetMapping("/achievements")
-    public List<AchievementItem> getAchievements() {
-        return achievementRepo.findAll();
+    public List<AchievementItem> getAchievements(@PathVariable String username) {
+        return achievementRepo.findAllByOwnerUsernameOrderByIdAsc(norm(username));
     }
 
     @GetMapping("/languages")
-    public List<LanguageExperienceItem> getLanguages() {
-        return languageRepo.findAll();
+    public List<LanguageExperienceItem> getLanguages(@PathVariable String username) {
+        return languageRepo.findAllByOwnerUsernameOrderByIdAsc(norm(username));
     }
 
-    // ====================== PROFILE ======================
+    @GetMapping("/education")
+    public List<EducationItem> getEducation(@PathVariable String username) {
+        return eduRepo.findAllByOwnerUsernameOrderByIdAsc(norm(username));
+    }
+
+    @GetMapping("/experience")
+    public List<ExperienceItem> getExperience(@PathVariable String username) {
+        return expRepo.findAllByOwnerUsernameOrderByIdAsc(norm(username));
+    }
+
+    // ====================== ADMIN PUTs (must match JWT user) ======================
 
     @PutMapping("/profile")
     @Transactional
-    public PortfolioProfile saveProfile(@RequestBody PortfolioProfile req) {
+    public PortfolioProfile updateProfile(@PathVariable String username,
+                                         @RequestBody PortfolioProfile body) {
+        assertOwner(username);
 
-        Optional<PortfolioProfile> existingOpt = profileRepo.findAll().stream().findFirst();
-        PortfolioProfile profile;
+        String u = norm(username);
 
-        if (existingOpt.isPresent()) {
-            profile = existingOpt.get();
-            profile.setName(req.getName());
-            profile.setTitle(req.getTitle());
-            profile.setTagline(req.getTagline());
-            profile.setAbout(req.getAbout());
-            profile.setLocation(req.getLocation());
-            profile.setEmailPublic(req.getEmailPublic());
-            profile.setInitials(req.getInitials());
-        } else {
-            profile = req;
-        }
+        // overwrite strategy (1 row per user)
+        profileRepo.deleteByOwnerUsername(u);
 
-        return profileRepo.save(profile);
+        body.setId(null);
+        body.setOwnerUsername(u);
+        return profileRepo.save(body);
     }
-
-    // ====================== SKILLS ======================
 
     @PutMapping("/skills")
     @Transactional
-    public PortfolioSkills saveSkills(@RequestBody PortfolioSkills req) {
+    public PortfolioSkills updateSkills(@PathVariable String username,
+                                        @RequestBody PortfolioSkills body) {
+        assertOwner(username);
 
-        Optional<PortfolioSkills> existing = skillsRepo.findAll().stream().findFirst();
-        PortfolioSkills skills;
+        String u = norm(username);
+        skillsRepo.deleteByOwnerUsername(u);
 
-        if (existing.isPresent()) {
-            skills = existing.get();
-            skills.setFrontend(req.getFrontend());
-            skills.setBackend(req.getBackend());
-            skills.setDatabase(req.getDatabase());
-            skills.setTools(req.getTools());
-        } else {
-            skills = req;
-        }
-
-        return skillsRepo.save(skills);
+        body.setId(null);
+        body.setOwnerUsername(u);
+        return skillsRepo.save(body);
     }
-
-    // ====================== SOCIALS (FIXED) ======================
 
     @PutMapping("/socials")
     @Transactional
-    public SocialLinks saveSocials(@RequestBody SocialLinks req) {
+    public SocialLinks updateSocials(@PathVariable String username,
+                                     @RequestBody SocialLinks body) {
+        assertOwner(username);
 
-        Optional<SocialLinks> existingOpt = socialsRepo.findAll().stream().findFirst();
-        SocialLinks socials;
+        String u = norm(username);
+        socialsRepo.deleteByOwnerUsername(u);
 
-        if (existingOpt.isPresent()) {
-            socials = existingOpt.get();
-            socials.setGithub(req.getGithub());
-            socials.setLinkedin(req.getLinkedin());
-            socials.setEmail(req.getEmail());
-            socials.setPhone(req.getPhone());
-            socials.setWebsite(req.getWebsite());
-            socials.setCtaTitle(req.getCtaTitle());
-            socials.setCtaSubtitle(req.getCtaSubtitle());
-        } else {
-            socials = req;
-        }
-
-        return socialsRepo.save(socials);
+        body.setId(null);
+        body.setOwnerUsername(u);
+        return socialsRepo.save(body);
     }
-
-    // ====================== EDUCATION ======================
-
-    @PutMapping("/education")
-    @Transactional
-    public List<EducationItem> saveEducation(@RequestBody List<EducationItem> items) {
-        eduRepo.deleteAll();
-        if (items == null) return List.of();
-        return eduRepo.saveAll(items);
-    }
-
-    // ====================== EXPERIENCE ======================
-
-    @PutMapping("/experience")
-    @Transactional
-    public List<ExperienceItem> saveExperience(@RequestBody List<ExperienceItem> items) {
-        expRepo.deleteAll();
-        if (items == null) return List.of();
-        return expRepo.saveAll(items);
-    }
-
-    // ====================== ACHIEVEMENTS ======================
 
     @PutMapping("/achievements")
     @Transactional
-    public List<AchievementItem> saveAchievements(@RequestBody List<AchievementItem> items) {
-        achievementRepo.deleteAll();
-        if (items == null) return List.of();
+    public List<AchievementItem> saveAchievements(@PathVariable String username,
+                                                 @RequestBody List<AchievementItem> items) {
+        assertOwner(username);
+        String u = norm(username);
+
+        achievementRepo.deleteByOwnerUsername(u);
+
+        for (AchievementItem a : items) {
+            a.setId(null);
+            a.setOwnerUsername(u);
+        }
         return achievementRepo.saveAll(items);
     }
 
-    // ====================== LANGUAGES ======================
-
     @PutMapping("/languages")
     @Transactional
-    public List<LanguageExperienceItem> saveLanguages(@RequestBody List<LanguageExperienceItem> items) {
-        languageRepo.deleteAll();
-        if (items == null) return List.of();
+    public List<LanguageExperienceItem> saveLanguages(@PathVariable String username,
+                                                     @RequestBody List<LanguageExperienceItem> items) {
+        assertOwner(username);
+        String u = norm(username);
+
+        languageRepo.deleteByOwnerUsername(u);
+
+        for (LanguageExperienceItem l : items) {
+            l.setId(null);
+            l.setOwnerUsername(u);
+        }
         return languageRepo.saveAll(items);
+    }
+
+    @PutMapping("/education")
+    @Transactional
+    public List<EducationItem> saveEducation(@PathVariable String username,
+                                            @RequestBody List<EducationItem> items) {
+        assertOwner(username);
+        String u = norm(username);
+
+        eduRepo.deleteByOwnerUsername(u);
+
+        for (EducationItem e : items) {
+            e.setId(null);
+            e.setOwnerUsername(u);
+        }
+        return eduRepo.saveAll(items);
+    }
+
+    @PutMapping("/experience")
+    @Transactional
+    public List<ExperienceItem> saveExperience(@PathVariable String username,
+                                               @RequestBody List<ExperienceItem> items) {
+        assertOwner(username);
+        String u = norm(username);
+
+        expRepo.deleteByOwnerUsername(u);
+
+        for (ExperienceItem e : items) {
+            e.setId(null);
+            e.setOwnerUsername(u);
+        }
+        return expRepo.saveAll(items);
     }
 }

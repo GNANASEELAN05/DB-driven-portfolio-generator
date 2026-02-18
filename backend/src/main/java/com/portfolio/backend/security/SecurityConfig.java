@@ -36,37 +36,33 @@ public class SecurityConfig {
         http
             .cors(Customizer.withDefaults())
             .csrf(csrf -> csrf.disable())
-
-            // allow iframe preview
             .headers(headers -> headers.frameOptions(frame -> frame.disable()))
-
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-
             .authorizeHttpRequests(auth -> auth
 
                 // preflight
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                // auth login
+                // auth login/register
                 .requestMatchers("/api/auth/**").permitAll()
 
-                // ===== PUBLIC VIEWER =====
-                .requestMatchers(HttpMethod.GET, "/api/portfolio/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/projects/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/resume/**").permitAll()
+                // ===== PUBLIC VIEWER (tenant-based) =====
+                .requestMatchers(HttpMethod.GET, "/api/u/*/portfolio/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/u/*/projects/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/u/*/resume/**").permitAll()
 
-                // ===== ADMIN =====
-                .requestMatchers(HttpMethod.POST, "/api/projects/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.PUT,  "/api/projects/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.DELETE,"/api/projects/**").hasRole("ADMIN")
+                // ===== ADMIN (tenant-based) =====
+                .requestMatchers(HttpMethod.POST, "/api/u/*/projects/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT,  "/api/u/*/projects/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE,"/api/u/*/projects/**").hasRole("ADMIN")
 
-                .requestMatchers(HttpMethod.PUT,  "/api/portfolio/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.POST, "/api/portfolio/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.DELETE,"/api/portfolio/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT,  "/api/u/*/portfolio/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/u/*/portfolio/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE,"/api/u/*/portfolio/**").hasRole("ADMIN")
 
-                .requestMatchers(HttpMethod.POST, "/api/resume/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.DELETE,"/api/resume/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.PUT,  "/api/resume/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/u/*/resume/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE,"/api/u/*/resume/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT,  "/api/u/*/resume/**").hasRole("ADMIN")
 
                 .anyRequest().permitAll()
             )
@@ -86,7 +82,6 @@ public class SecurityConfig {
             "https://gnanaseelan-v-portfolio.vercel.app"
         ));
 
-        // allow everything needed for admin + viewer
         cfg.addAllowedHeader("*");
         cfg.addAllowedMethod("*");
         cfg.setAllowCredentials(true);

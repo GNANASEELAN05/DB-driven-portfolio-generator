@@ -1,22 +1,11 @@
 import React, { useState } from "react";
-import {
-  Box,
-  Button,
-  Paper,
-  Stack,
-  TextField,
-  Typography,
-  Alert,
-} from "@mui/material";
-import { MdLock, MdLogin } from "react-icons/md";
-import { useParams } from "react-router-dom";
-import { adminLogin } from "../api/portfolio";
+import { Box, Button, Paper, Stack, TextField, Typography, Alert } from "@mui/material";
+import { MdPersonAdd } from "react-icons/md";
+import { registerUser } from "../api/portfolio";
 
-export default function AdminLogin() {
-  const { username: urlUser } = useParams();
-
+export default function Register() {
   React.useEffect(() => {
-    document.title = "Admin Login";
+    document.title = "Create Portfolio Account";
   }, []);
 
   // ✅ if already logged in, go straight to dashboard
@@ -27,7 +16,7 @@ export default function AdminLogin() {
     }
   }, []);
 
-  const [username, setUsername] = useState((urlUser || "").trim().toLowerCase());
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
@@ -39,14 +28,8 @@ export default function AdminLogin() {
 
     try {
       const u = username.trim().toLowerCase();
-      const expected = (urlUser || "").trim().toLowerCase();
 
-      if (expected && u !== expected) {
-        setErr(`Please login using your own URL username: ${expected}`);
-        return;
-      }
-
-      const res = await adminLogin(u, password);
+      const res = await registerUser(u, password);
 
       const token =
         res &&
@@ -57,7 +40,7 @@ export default function AdminLogin() {
           : null;
 
       if (!token) {
-        setErr("Invalid username or password");
+        setErr("Registration failed. Please try again.");
         return;
       }
 
@@ -66,9 +49,14 @@ export default function AdminLogin() {
       localStorage.setItem("token", token);
       localStorage.setItem("auth_user", u);
 
+      // go to admin panel
       window.location.replace(`/${u}/adminpanel`);
     } catch (error) {
-      setErr("Invalid username or password");
+      const msg =
+        error?.response?.data && typeof error.response.data === "string"
+          ? error.response.data
+          : "Registration failed. Try a different username.";
+      setErr(msg);
     } finally {
       setLoading(false);
     }
@@ -77,15 +65,15 @@ export default function AdminLogin() {
   return (
     <Box
       sx={{
-        height: "100vh",
+        minHeight: "100vh",
         width: "100vw",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "linear-gradient(135deg,#0f0c29,#302b63,#24243e)",
+        background: "linear-gradient(135deg,#0B1220,#121A2B,#0B1220)",
       }}
     >
-      <Box sx={{ width: "100%", maxWidth: 420, px: 2 }}>
+      <Box sx={{ width: "100%", maxWidth: 520, px: 2 }}>
         <Paper
           elevation={10}
           sx={{
@@ -99,7 +87,6 @@ export default function AdminLogin() {
           }}
         >
           <Stack spacing={3}>
-            {/* HEADER */}
             <Stack alignItems="center" spacing={1}>
               <Box
                 sx={{
@@ -113,7 +100,7 @@ export default function AdminLogin() {
                   fontSize: 32,
                 }}
               >
-                <MdLock />
+                <MdPersonAdd />
               </Box>
 
               <Typography
@@ -126,17 +113,13 @@ export default function AdminLogin() {
                   WebkitTextFillColor: "transparent",
                 }}
               >
-                Admin Portal
+                Portfolio Generator
               </Typography>
 
-              <Typography
-                sx={{
-                  opacity: 0.7,
-                  color: "#ddd",
-                  textAlign: "center",
-                }}
-              >
-                Login to manage: <b>{(urlUser || "").trim()}</b>
+              <Typography sx={{ opacity: 0.7, color: "#ddd", textAlign: "center" }}>
+                Create your own username. Your portfolio URL becomes:
+                <br />
+                <b style={{ color: "#fff" }}>/{`{username}`}</b>
               </Typography>
             </Stack>
 
@@ -146,14 +129,14 @@ export default function AdminLogin() {
               </Alert>
             )}
 
-            {/* FORM */}
             <Box component="form" onSubmit={onSubmit}>
               <Stack spacing={2}>
                 <TextField
-                  label="Username"
+                  label="Username (for URL)"
                   fullWidth
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
+                  helperText="Allowed: a-z, 0-9, dot, underscore, hyphen (3-30 chars)"
                   sx={inputStyle}
                 />
 
@@ -169,7 +152,7 @@ export default function AdminLogin() {
                 <Button
                   type="submit"
                   variant="contained"
-                  startIcon={<MdLogin />}
+                  startIcon={<MdPersonAdd />}
                   disabled={loading}
                   sx={{
                     mt: 1,
@@ -181,37 +164,29 @@ export default function AdminLogin() {
                     boxShadow: "0 10px 30px rgba(99,102,241,0.5)",
                   }}
                 >
-                  {loading ? "Signing in..." : "Login"}
+                  {loading ? "Creating..." : "Create Account"}
                 </Button>
 
                 <Button
                   variant="text"
-                  onClick={() => (window.location.href = "/register")}
+                  onClick={() => {
+                    const u = username.trim().toLowerCase();
+                    // ✅ always go to login (generic if username is empty)
+                    window.location.href = u ? `/${u}/adminpanel/login` : "/admin-login";
+                  }}
                   sx={{ color: "#cbd5e1", fontWeight: 700 }}
                 >
-                  Create new account
+                  Already have an account? Go to Login
                 </Button>
               </Stack>
             </Box>
           </Stack>
         </Paper>
-
-        <Typography
-          sx={{
-            textAlign: "center",
-            mt: 2,
-            fontSize: 13,
-            color: "#aaa",
-          }}
-        >
-          Portfolio Admin Panel • Secure Access
-        </Typography>
       </Box>
     </Box>
   );
 }
 
-/* ---------- INPUT STYLE ---------- */
 const inputStyle = {
   "& .MuiOutlinedInput-root": {
     borderRadius: 3,
@@ -220,6 +195,9 @@ const inputStyle = {
   },
   "& .MuiInputLabel-root": {
     color: "#aaa",
+  },
+  "& .MuiFormHelperText-root": {
+    color: "rgba(255,255,255,0.55)",
   },
   "& .MuiOutlinedInput-notchedOutline": {
     borderColor: "rgba(255,255,255,0.25)",

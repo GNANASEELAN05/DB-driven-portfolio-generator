@@ -10,67 +10,84 @@ const authHeader = () => ({
   },
 });
 
+const tenant = (username) => `/u/${encodeURIComponent(username || "").trim().toLowerCase()}`;
+
 /* =========================
    VIEWER (PUBLIC GETs)
 ========================= */
-export const getProfile = () => http.get("/portfolio/profile");
-export const getSkills = () => http.get("/portfolio/skills");
-export const getFeaturedProjects = () => http.get("/projects/featured");
-export const getExperience = () => http.get("/portfolio/experience");
-export const getEducation = () => http.get("/portfolio/education");
-export const getSocials = () => http.get("/portfolio/socials");
-export const getAchievements = () => http.get("/portfolio/achievements");
-export const getLanguageExperience = () => http.get("/portfolio/languages");
+export const getProfile = (username) =>
+  http.get(`${tenant(username)}/portfolio/profile`);
+
+export const getSkills = (username) =>
+  http.get(`${tenant(username)}/portfolio/skills`);
+
+export const getFeaturedProjects = (username) =>
+  http.get(`${tenant(username)}/projects/featured`);
+
+export const getExperience = (username) =>
+  http.get(`${tenant(username)}/portfolio/experience`);
+
+export const getEducation = (username) =>
+  http.get(`${tenant(username)}/portfolio/education`);
+
+export const getSocials = (username) =>
+  http.get(`${tenant(username)}/portfolio/socials`);
+
+export const getAchievements = (username) =>
+  http.get(`${tenant(username)}/portfolio/achievements`);
+
+export const getLanguageExperience = (username) =>
+  http.get(`${tenant(username)}/portfolio/languages`);
 
 /* =========================
    ADMIN (Portfolio PUTs)
 ========================= */
-export const updateProfile = (payload) =>
-  http.put("/portfolio/profile", payload, authHeader());
+export const updateProfile = (username, payload) =>
+  http.put(`${tenant(username)}/portfolio/profile`, payload, authHeader());
 
-export const updateSkills = (payload) =>
-  http.put("/portfolio/skills", payload, authHeader());
+export const updateSkills = (username, payload) =>
+  http.put(`${tenant(username)}/portfolio/skills`, payload, authHeader());
 
-export const updateSocials = (payload) =>
-  http.put("/portfolio/socials", payload, authHeader());
+export const updateSocials = (username, payload) =>
+  http.put(`${tenant(username)}/portfolio/socials`, payload, authHeader());
 
-export const saveAchievements = (payload) =>
-  http.put("/portfolio/achievements", payload, authHeader());
+export const saveAchievements = (username, payload) =>
+  http.put(`${tenant(username)}/portfolio/achievements`, payload, authHeader());
 
-export const saveLanguageExperience = (payload) =>
-  http.put("/portfolio/languages", payload, authHeader());
+export const saveLanguageExperience = (username, payload) =>
+  http.put(`${tenant(username)}/portfolio/languages`, payload, authHeader());
 
-export const updateEducation = (payload) =>
-  http.put("/portfolio/education", payload, authHeader());
+export const updateEducation = (username, payload) =>
+  http.put(`${tenant(username)}/portfolio/education`, payload, authHeader());
 
-export const updateExperience = (payload) =>
-  http.put("/portfolio/experience", payload, authHeader());
+export const updateExperience = (username, payload) =>
+  http.put(`${tenant(username)}/portfolio/experience`, payload, authHeader());
 
 /* =========================
    ADMIN (Projects)
 ========================= */
-export const getAllProjectsAdmin = () =>
-  http.get("/projects", authHeader());
+export const getAllProjectsAdmin = (username) =>
+  http.get(`${tenant(username)}/projects`, authHeader());
 
-export const createProject = (payload) =>
-  http.post("/projects", payload, authHeader());
+export const createProject = (username, payload) =>
+  http.post(`${tenant(username)}/projects`, payload, authHeader());
 
-export const updateProject = (id, payload) =>
-  http.put(`/projects/${id}`, payload, authHeader());
+export const updateProject = (username, id, payload) =>
+  http.put(`${tenant(username)}/projects/${id}`, payload, authHeader());
 
-export const deleteProject = (id) =>
-  http.delete(`/projects/${id}`, authHeader());
+export const deleteProject = (username, id) =>
+  http.delete(`${tenant(username)}/projects/${id}`, authHeader());
 
 /* =========================
    RESUME SECTION
 ========================= */
 
 // upload resume
-export const uploadResume = (file) => {
+export const uploadResume = (username, file) => {
   const form = new FormData();
   form.append("file", file);
 
-  return http.post("/resume/upload", form, {
+  return http.post(`${tenant(username)}/resume/upload`, form, {
     headers: {
       Authorization: `Bearer ${localStorage.getItem("token")}`,
       "Content-Type": "multipart/form-data",
@@ -79,30 +96,33 @@ export const uploadResume = (file) => {
 };
 
 // viewer download
-export const downloadResumeUrl = () =>
-  `${http.defaults.baseURL}/resume/download`;
+export const downloadResumeUrl = (username) =>
+  `${http.defaults.baseURL}${tenant(username)}/resume/download`;
 
-export const viewResumeUrl = () =>
-  `${http.defaults.baseURL}/resume/download`;
+export const viewResumeUrl = (username) =>
+  `${http.defaults.baseURL}${tenant(username)}/resume/download`;
 
 // admin list
-export const listResumesAdmin = () =>
-  http.get("/resume/list", authHeader());
+export const listResumesAdmin = (username) =>
+  http.get(`${tenant(username)}/resume/list`, authHeader());
 
 // preview by id
-export const viewResumeByIdUrl = (id) =>
-  `${http.defaults.baseURL}/resume/${id}/view`;
+export const viewResumeByIdUrl = (username, id) =>
+  `${http.defaults.baseURL}${tenant(username)}/resume/${id}/view`;
 
 // set primary resume
-export const setPrimaryResume = (id) =>
-  http.put(`/resume/${id}/primary`, {}, authHeader());
+export const setPrimaryResume = (username, id) =>
+  http.put(`${tenant(username)}/resume/${id}/primary`, {}, authHeader());
 
 // delete resume
-export const deleteResumeById = (id) =>
-  http.delete(`/resume/${id}`, authHeader());
+export const deleteResumeById = (username, id) =>
+  http.delete(`${tenant(username)}/resume/${id}`, authHeader());
 
 /* =========================
    AUTH
 ========================= */
 export const adminLogin = (username, password) =>
   http.post("/auth/login", { username, password });
+
+export const registerUser = (username, password) =>
+  http.post("/auth/register", { username, password });

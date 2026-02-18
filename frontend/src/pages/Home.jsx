@@ -26,7 +26,7 @@ import {
   useTheme,
 } from "@mui/material";
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
 import {
   MdArrowDownward,
@@ -416,15 +416,23 @@ function ResumePreviewDialog({ open, title, onClose, url, blobUrl, loading }) {
 
 export default function Home({ toggleTheme }) {
   // ⭐ change browser tab name for viewer
-useEffect(() => {
-  document.title = "Gnanaseelan Portfolio";   // <-- change to your name
-}, []);
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const navigate = useNavigate();
 
-  const [loading, setLoading] = useState(true);
+    const { username } = useParams();
+    // ⭐ Dynamic browser tab title based on URL user
+useEffect(() => {
+  const user = (username || "").trim();
+  if (user) {
+    document.title = `${user} Portfolio`;
+  } else {
+    document.title = "Portfolio";
+  }
+}, [username]);
+
+const [loading, setLoading] = useState(true);
   const [reloadTick, setReloadTick] = useState(0);
 
   
@@ -469,14 +477,14 @@ useEffect(() => {
 
   // ✅ cache-busting for resume (updates after admin delete/primary)
   const contentVersion = useMemo(() => localStorage.getItem("content_version") || "0", [reloadTick]);
-  const resumeDownloadBase = useMemo(() => downloadResumeUrl(), []);
+  const resumeDownloadBase = useMemo(() => downloadResumeUrl(username), [username]);
   const resumeDownloadUrlBusted = useMemo(() => {
     const joiner = resumeDownloadBase.includes("?") ? "&" : "?";
     return `${resumeDownloadBase}${joiner}v=${encodeURIComponent(contentVersion)}&t=${Date.now()}`;
   }, [resumeDownloadBase, contentVersion]);
 
   // ✅ FIX: use the real /view endpoint + cache bust
-  const resumeViewBase = useMemo(() => viewResumeUrl(), []);
+  const resumeViewBase = useMemo(() => viewResumeUrl(username), []);
   const resumeViewUrlBusted = useMemo(() => {
     const joiner = resumeViewBase.includes("?") ? "&" : "?";
     return `${resumeViewBase}${joiner}v=${encodeURIComponent(contentVersion)}&t=${Date.now()}`;
@@ -490,14 +498,14 @@ useEffect(() => {
         setLoading(true);
 
         const [profRes, skillsRes, projRes, expRes, eduRes, socRes, achRes, langRes] = await Promise.all([
-          getProfile(),
-          getSkills(),
-          getFeaturedProjects(),
-          getExperience(),
-          getEducation(),
-          getSocials(),
-          getAchievements(),
-          getLanguageExperience(),
+          getProfile(username),
+          getSkills(username),
+          getFeaturedProjects(username),
+          getExperience(username),
+          getEducation(username),
+          getSocials(username),
+          getAchievements(username),
+          getLanguageExperience(username),
         ]);
 
         if (!alive) return;
@@ -745,7 +753,7 @@ useEffect(() => {
 
               <Tooltip title="Go to Admin">
                 <IconButton
-                  onClick={() => navigate("/admin")}
+                  onClick={() => navigate(`/${username}/adminpanel`)}
                   size="small"
                   sx={{
                     ...iconBtnSx,

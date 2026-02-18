@@ -2,6 +2,7 @@ package com.portfolio.backend.controller;
 
 import com.portfolio.backend.dto.LoginRequest;
 import com.portfolio.backend.dto.LoginResponse;
+import com.portfolio.backend.dto.RegisterRequest;
 import com.portfolio.backend.model.User;
 import com.portfolio.backend.repository.UserRepository;
 import com.portfolio.backend.security.JwtService;
@@ -32,6 +33,42 @@ public class AuthController {
         this.passwordEncoder = passwordEncoder;
     }
 
+    // ================= REGISTER (CREATE ACCOUNT) =================
+    @PostMapping("/register")
+    public ResponseEntity<?> register(@RequestBody RegisterRequest req) {
+
+        String username = req.getUsername() == null ? "" : req.getUsername().trim().toLowerCase();
+        String password = req.getPassword() == null ? "" : req.getPassword();
+
+        if (username.isBlank() || password.isBlank()) {
+            return ResponseEntity.badRequest().body("Username and password are required");
+        }
+
+        if (username.length() < 3 || username.length() > 30) {
+            return ResponseEntity.badRequest().body("Username must be 3-30 characters");
+        }
+
+        // allow only safe URL usernames
+        if (!username.matches("^[a-z0-9](?:[a-z0-9._-]{1,28}[a-z0-9])?$")) {
+            return ResponseEntity.badRequest().body("Username contains invalid characters");
+        }
+
+        if (userRepository.findByUsername(username).isPresent()) {
+            return ResponseEntity.status(409).body("Username already exists");
+        }
+
+        // Each registered user gets their own admin dashboard, so keep role as ADMIN
+        User u = new User();
+        u.setUsername(username);
+        u.setPassword(passwordEncoder.encode(password));
+        u.setRole("ADMIN");
+        userRepository.save(u);
+
+        // auto-login after register (optional but useful)
+        String token = jwtService.generateToken(username, "ROLE_ADMIN");
+        return ResponseEntity.ok(new LoginResponse(token));
+    }
+
     // ================= ADMIN LOGIN =================
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest req) {
@@ -50,7 +87,6 @@ public class AuthController {
         User user = userRepository.findByUsername(req.getUsername())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // 🔥 IMPORTANT FIX HERE
         String role = user.getRole();
         if (!role.startsWith("ROLE_")) {
             role = "ROLE_" + role;

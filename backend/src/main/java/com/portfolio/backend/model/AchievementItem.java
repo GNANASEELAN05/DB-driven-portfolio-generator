@@ -3,37 +3,48 @@ package com.portfolio.backend.model;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "achievements")
+@Table(
+        name = "achievements",
+        indexes = {
+                @Index(name = "idx_ach_owner", columnList = "ownerUsername")
+        }
+)
 public class AchievementItem {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String title;         
-    private String issuer;        
+    /**
+     * Multi-tenant key
+     */
+    @Column(nullable = false)
+    private String ownerUsername;
 
-    // 🔥 FIX: rename date → year
-    private String year;          
+    private String title;         // e.g., "AWS Cloud Practitioner"
+    private String issuer;        // e.g., "Amazon"
+    private String date;          // e.g., "2025"
 
     @Column(length = 4000)
-    private String description;   
+    private String description;   // details
 
-    private String link;          
+    private String link;          // optional cert link
 
-    // ===== GETTERS =====
     public Long getId() { return id; }
+
+    public String getOwnerUsername() { return ownerUsername; }
+    public void setOwnerUsername(String ownerUsername) { this.ownerUsername = ownerUsername; }
+
     public String getTitle() { return title; }
     public String getIssuer() { return issuer; }
-    public String getYear() { return year; }
+    public String getDate() { return date; }
     public String getDescription() { return description; }
     public String getLink() { return link; }
 
-    // ===== SETTERS =====
     public void setId(Long id) { this.id = id; }
     public void setTitle(String title) { this.title = title; }
     public void setIssuer(String issuer) { this.issuer = issuer; }
-    public void setYear(String year) { this.year = year; }
+    public void setDate(String date) { this.date = date; }
     public void setDescription(String description) { this.description = description; }
     public void setLink(String link) { this.link = link; }
 }

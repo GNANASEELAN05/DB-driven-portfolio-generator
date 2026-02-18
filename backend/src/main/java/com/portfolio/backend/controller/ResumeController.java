@@ -3,13 +3,16 @@ package com.portfolio.backend.controller;
 import com.portfolio.backend.model.ResumeFile;
 import com.portfolio.backend.service.ResumeService;
 import org.springframework.http.*;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.*;
 
 @RestController
-@RequestMapping("/api/resume")
+@RequestMapping("/api/u/{username}/resume")
 @CrossOrigin(origins = "*")
 public class ResumeController {
 
@@ -19,53 +22,59 @@ public class ResumeController {
         this.service = service;
     }
 
+    private String norm(String username) {
+        return username == null ? "" : username.trim().toLowerCase();
+    }
+
+    private void assertOwner(String username) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || auth.getName() == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized");
+        }
+        String current = auth.getName().trim().toLowerCase();
+        if (!current.equals(norm(username))) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not your portfolio");
+        }
+    }
+
     // =========================================================
-    // ADMIN: Upload PDF resume
+    // ADMIN: Upload PDF resume (per user)
     // =========================================================
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<?> upload(@RequestPart("file") MultipartFile file) {
+    public ResponseEntity<?> upload(@PathVariable String username,
+                                    @RequestPart("file") MultipartFile file) {
 
-        System.out.println("====== UPLOAD API CALLED ======");
-        System.out.println("File name: " + file.getOriginalFilename());
-        System.out.println("Size: " + file.getSize());
+        assertOwner(username);
 
         try {
-            service.uploadResume(file);
-            System.out.println("====== UPLOAD SUCCESS ======");
+            service.uploadResume(username, file);
             return ResponseEntity.ok("Resume uploaded successfully");
-
         } catch (Exception e) {
-
-            System.out.println("====== UPLOAD FAILED ======");
-            e.printStackTrace();
-
             return ResponseEntity.status(500)
                     .body("Upload failed: " + e.getMessage());
         }
     }
 
     // =========================================================
-    // ADMIN: Get all resumes list (WITH UPLOAD DATE)
+    // ADMIN: Get all resumes list (per user)
     // =========================================================
     @GetMapping("/list")
-    public ResponseEntity<?> getAll() {
+    public ResponseEntity<?> getAll(@PathVariable String username) {
+        assertOwner(username);
+
         try {
-            List<ResumeFile> list = service.getAllResumes();
+            List<ResumeFile> list = service.getAllResumes(username);
 
             List<Map<String, Object>> response = new ArrayList<>();
             int i = 1;
 
             for (ResumeFile r : list) {
                 Map<String, Object> map = new HashMap<>();
-
                 map.put("id", r.getId());
                 map.put("fileName", r.getFilename());
                 map.put("serial", i++);
                 map.put("primary", r.isPrimaryResume());
-
-                // ⭐⭐⭐ SEND UPLOAD DATE TO FRONTEND
                 map.put("uploadedAt", r.getUploadedAt());
-
                 response.add(map);
             }
 
@@ -78,12 +87,14 @@ public class ResumeController {
     }
 
     // =========================================================
-    // ADMIN: Preview resume
+    // ADMIN: Preview resume (per user)
     // =========================================================
     @GetMapping("/{id}/view")
-    public ResponseEntity<byte[]> viewResume(@PathVariable Long id) {
+    public ResponseEntity<byte[]> viewResume(@PathVariable String username, @PathVariable Long id) {
+        assertOwner(username);
+
         try {
-            ResumeFile file = service.getResumeById(id);
+            ResumeFile file = service.getResumeById(username, id);
 
             if (file == null || file.getData() == null)
                 return ResponseEntity.notFound().build();
@@ -105,12 +116,12 @@ public class ResumeController {
     }
 
     // =========================================================
-    // VIEWER: Download primary resume
+    // VIEWER: Download primary resume (public, per user)
     // =========================================================
     @GetMapping("/download")
-    public ResponseEntity<byte[]> downloadLatest() {
+    public ResponseEntity<byte[]> downloadLatest(@PathVariable String username) {
         try {
-            ResumeFile latest = service.getLatestResume();
+            ResumeFile latest = service.getLatestResume(username);
 
             if (latest == null || latest.getData() == null) {
                 return ResponseEntity.notFound().build();
@@ -133,12 +144,14 @@ public class ResumeController {
     }
 
     // =========================================================
-    // ADMIN: Delete resume
+    // ADMIN: Delete resume (per user)
     // =========================================================
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> delete(@PathVariable Long id) {
+    public ResponseEntity<?> delete(@PathVariable String username, @PathVariable Long id) {
+        assertOwner(username);
+
         try {
-            service.deleteResume(id);
+            service.deleteResume(username, id);
             return ResponseEntity.ok("Deleted");
         } catch (Exception e) {
             e.printStackTrace();
@@ -147,12 +160,14 @@ public class ResumeController {
     }
 
     // =========================================================
-    // ADMIN: Set primary
+    // ADMIN: Set primary (per user)
     // =========================================================
     @PutMapping("/{id}/primary")
-    public ResponseEntity<?> setPrimary(@PathVariable Long id) {
+    public ResponseEntity<?> setPrimary(@PathVariable String username, @PathVariable Long id) {
+        assertOwner(username);
+
         try {
-            service.setPrimary(id);
+            service.setPrimary(username, id);
             return ResponseEntity.ok("Primary updated");
         } catch (Exception e) {
             e.printStackTrace();

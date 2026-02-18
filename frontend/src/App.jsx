@@ -1,11 +1,12 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 
 import Home from "./pages/Home";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
+import Register from "./pages/Register";
 
 const makeTheme = (mode, flavor = "viewer") => {
   const viewerPrimary = "#7C3AED";
@@ -49,26 +50,19 @@ export default function App() {
       : true
   );
 
-  // 🔥 IMPORTANT: reactive login state
-  const [loggedIn, setLoggedIn] = useState(
-    !!localStorage.getItem("token")
-  );
+  // 🔥 reactive login state
+  const [loggedIn, setLoggedIn] = useState(!!localStorage.getItem("token"));
 
   // 🔥 watch token changes live
   useEffect(() => {
-    const checkToken = () => {
-      setLoggedIn(!!localStorage.getItem("token"));
-    };
-
+    const checkToken = () => setLoggedIn(!!localStorage.getItem("token"));
     window.addEventListener("storage", checkToken);
     window.addEventListener("focus", checkToken);
-
     return () => {
       window.removeEventListener("storage", checkToken);
       window.removeEventListener("focus", checkToken);
     };
   }, []);
-  
 
   const viewerTheme = useMemo(
     () => makeTheme(viewerDark ? "dark" : "light", "viewer"),
@@ -96,13 +90,71 @@ export default function App() {
     });
   };
 
+  const getAuthUser = () => (localStorage.getItem("auth_user") || "").trim().toLowerCase();
+  const hasToken = () => !!localStorage.getItem("token");
+
+  const RedirectToBest = () => {
+    const authUser = getAuthUser();
+    return hasToken() && authUser ? (
+      <Navigate to={`/${authUser}/adminpanel`} replace />
+    ) : (
+      <Navigate to="/register" replace />
+    );
+  };
+
+  const IfAuthedGoDashboard = ({ children }) => {
+    const authUser = getAuthUser();
+    if (hasToken() && authUser) return <Navigate to={`/${authUser}/adminpanel`} replace />;
+    return children;
+  };
+
+  const RequireAuth = ({ children }) => {
+    const { username } = useParams();
+    const authUser = getAuthUser();
+
+    if (!hasToken() || !authUser) return <Navigate to="/admin-login" replace />;
+
+    const urlUser = (username || "").trim().toLowerCase();
+    if (urlUser && authUser !== urlUser) return <Navigate to={`/${authUser}/adminpanel`} replace />;
+
+    return children;
+  };
+
   return (
     <BrowserRouter>
       <Routes>
+        {/* LANDING */}
+        <Route path="/" element={<RedirectToBest />} />
 
-        {/* VIEWER */}
+        {/* CREATE ACCOUNT */}
         <Route
-          path="/"
+          path="/register"
+          element={
+            <IfAuthedGoDashboard>
+              <ThemeProvider theme={viewerTheme}>
+                <CssBaseline />
+                <Register />
+              </ThemeProvider>
+            </IfAuthedGoDashboard>
+          }
+        />
+
+        {/* ✅ NEW: ADMIN LOGIN (GENERIC): /admin-login */}
+        <Route
+          path="/admin-login"
+          element={
+            <IfAuthedGoDashboard>
+              <ThemeProvider theme={adminTheme}>
+                <CssBaseline />
+                <AdminLogin />
+              </ThemeProvider>
+            </IfAuthedGoDashboard>
+          }
+        />
+
+        {/* VIEWER: /{username} */}
+        <Route
+          path="/:username"
           element={
             <ThemeProvider theme={viewerTheme}>
               <CssBaseline />
@@ -111,35 +163,34 @@ export default function App() {
           }
         />
 
-        {/* ADMIN LOGIN */}
+        {/* ADMIN LOGIN: /{username}/adminpanel/login */}
         <Route
-          path="/admin/login"
+          path="/:username/adminpanel/login"
           element={
-            <ThemeProvider theme={adminTheme}>
-              <CssBaseline />
-              <AdminLogin />
-            </ThemeProvider>
+            <IfAuthedGoDashboard>
+              <ThemeProvider theme={adminTheme}>
+                <CssBaseline />
+                <AdminLogin />
+              </ThemeProvider>
+            </IfAuthedGoDashboard>
           }
         />
 
-        {/* ADMIN DASHBOARD */}
+        {/* ADMIN DASHBOARD: /{username}/adminpanel */}
         <Route
-          path="/admin"
+          path="/:username/adminpanel"
           element={
-            loggedIn ? (
+            <RequireAuth>
               <ThemeProvider theme={adminTheme}>
                 <CssBaseline />
                 <AdminDashboard setDarkMode={toggleAdminTheme} />
               </ThemeProvider>
-            ) : (
-              <Navigate to="/admin/login" replace />
-            )
+            </RequireAuth>
           }
         />
 
         {/* FALLBACK */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-
+        <Route path="*" element={<RedirectToBest />} />
       </Routes>
     </BrowserRouter>
   );

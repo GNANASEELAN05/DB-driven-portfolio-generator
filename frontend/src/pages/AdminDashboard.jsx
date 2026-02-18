@@ -1,6 +1,7 @@
 // src/pages/AdminDashboard.jsx
 import React, { useState } from "react";
 import TextareaAutosize from "@mui/material/TextareaAutosize";
+import { useNavigate, useParams } from "react-router-dom";
 
 import {
   AppBar,
@@ -598,10 +599,32 @@ function ResumePreviewDialog({ open, title, onClose, url, blobUrl, loading }) {
   );
 }
 export default function AdminDashboard(props) {
+  const navigate = useNavigate();
+  const { username } = useParams();
+
+  // enforce tenant: token user must match URL user
+  React.useEffect(() => {
+    const authUser = (localStorage.getItem("auth_user") || "").trim().toLowerCase();
+    const urlUser = (username || "").trim().toLowerCase();
+    if (!localStorage.getItem("token")) {
+      navigate("/register", { replace: true });
+      return;
+    }
+    if (authUser && urlUser && authUser !== urlUser) {
+      // prevent collision: user cannot open other user\'s admin panel
+      navigate(`/${authUser}/adminpanel`, { replace: true });
+    }
+  }, [navigate, username]);
+
   // ⭐ change browser tab name (ADMIN DASHBOARD)
 React.useEffect(() => {
-  document.title = "Gnanaseelan Admin Panel";  // change name if you want
-}, []);
+  const user = (username || "").trim();
+  if (user) {
+    document.title = `${user} Admin Panel`;
+  } else {
+    document.title = "Admin Panel";
+  }
+}, [username]);
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
@@ -698,14 +721,14 @@ const [editValue, setEditValue] = useState("");
       setLoading(true);
 
       const [p, s, pr, so, a, l, edu, exp] = await Promise.all([
-        getProfile(),
-        getSkills(),
-        getAllProjectsAdmin(),
-        getSocials(),
-        getAchievements(),
-        getLanguageExperience(),
-        getEducation(),
-        getExperience(),
+        getProfile(username),
+        getSkills(username),
+        getAllProjectsAdmin(username),
+        getSocials(username),
+        getAchievements(username),
+        getLanguageExperience(username),
+        getEducation(username),
+        getExperience(username),
       ]);
 
       setProfile(p?.data || {});
@@ -734,7 +757,7 @@ setSkillTable(table);
       setExperience(Array.isArray(exp?.data) ? exp.data : []);
 
       try {
-        const r = await listResumesAdmin();
+        const r = await listResumesAdmin(username);
         if (r?.data && Array.isArray(r.data)) setResumes(r.data);
       } catch {}
 
@@ -773,7 +796,7 @@ const handlePushResume = async (r) => {
       setErr("");
       setOk("");
       setLoading(true);
-      await updateProfile(profile);
+      await updateProfile(username, profile);
       setOk("Profile saved to DB.");
       bumpContentVersion();
     } catch {
@@ -796,7 +819,7 @@ const handlePushResume = async (r) => {
       tools: skillTable.filter(s=>s.category==="tools").map(s=>s.name).join(","),
     };
 
-    await updateSkills(payload);
+    await updateSkills(username, payload);
 
     setOk("Skills saved to database successfully");
     bumpContentVersion();
@@ -835,7 +858,7 @@ const saveEditSkill = (i) => {
       setErr("");
       setOk("");
       setLoading(true);
-      await updateSocials(socials);
+      await updateSocials(username, socials);
       setOk("Contact / Links saved to DB.");
       bumpContentVersion();
     } catch {
@@ -864,10 +887,10 @@ const saveEditSkill = (i) => {
       setLoading(true);
 
       if (projDlgMode === "edit" && projDlgInitial?.id) {
-        await updateProject(projDlgInitial.id, form);
+        await updateProject(username, projDlgInitial.id, form);
         setOk("Project updated.");
       } else {
-        await createProject(form);
+        await createProject(username, form);
         setOk("Project added.");
       }
 
@@ -892,7 +915,7 @@ const saveEditSkill = (i) => {
           setErr("");
           setOk("");
           setLoading(true);
-          await deleteProject(proj.id);
+          await deleteProject(username, proj.id);
           setOk("Project deleted.");
           await fetchAllAdmin();
           bumpContentVersion();
@@ -940,7 +963,7 @@ const saveEditSkill = (i) => {
       setErr("");
       setOk("");
       setLoading(true);
-      await saveAchievements(achievements.map(({ id, ...rest }) => rest));
+      await saveAchievements(username, achievements.map(({ id, ...rest }) => rest));
       setOk("Achievements saved to DB.");
       await fetchAllAdmin();
       bumpContentVersion();
@@ -993,7 +1016,7 @@ const saveEditSkill = (i) => {
         notes: l.notes || "",
       }));
 
-      await saveLanguageExperience(payload);
+      await saveLanguageExperience(username, payload);
       setOk("Languages experience saved to DB.");
       await fetchAllAdmin();
       bumpContentVersion();
@@ -1044,7 +1067,7 @@ const saveEditSkill = (i) => {
       // 2) Fallback: PUT full list replace
       if (!deleted) {
         const payload = next.map(({ id: _id, ...rest }) => rest);
-        await updateEducation(payload);
+        await updateEducation(username, payload);
       }
 
       setOk("Education deleted.");
@@ -1070,7 +1093,7 @@ const saveEditSkill = (i) => {
       setOk("");
       setLoading(true);
       const payload = education.map(({ id, ...rest }) => rest);
-      await updateEducation(payload);
+      await updateEducation(username, payload);
       setOk("Education saved to DB.");
       await fetchAllAdmin();
       bumpContentVersion();
@@ -1120,7 +1143,7 @@ const saveEditSkill = (i) => {
 
       if (!deleted) {
         const payload = next.map(({ id: _id, ...rest }) => rest);
-        await updateExperience(payload);
+        await updateExperience(username, payload);
       }
 
       setOk("Experience deleted.");
@@ -1146,7 +1169,7 @@ const saveEditSkill = (i) => {
       setOk("");
       setLoading(true);
       const payload = experience.map(({ id, ...rest }) => rest);
-      await updateExperience(payload);
+      await updateExperience(username, payload);
       setOk("Experience saved to DB.");
       await fetchAllAdmin();
       bumpContentVersion();
@@ -1164,9 +1187,9 @@ const saveEditSkill = (i) => {
       setOk("");
       setLoading(true);
 
-      await uploadResume(file);
+      await uploadResume(username, file);
 
-      const r = await listResumesAdmin();
+      const r = await listResumesAdmin(username);
       if (r?.data && Array.isArray(r.data)) setResumes(r.data);
 
       setOk("Resume uploaded.");
@@ -1206,7 +1229,7 @@ const saveEditSkill = (i) => {
   };
 
   const previewCurrentResumeInline = async () => {
-    await openResumePreviewInline("Current Resume", viewResumeUrl());
+    await openResumePreviewInline("Current Resume", viewResumeUrl(username));
   };
 
   // ✅ FIX: this is the REAL “push to viewer”: set primary in DB
@@ -1218,7 +1241,7 @@ const saveEditSkill = (i) => {
       setOk("");
       setLoading(true);
 
-      await setPrimaryResume(item.id);
+      await setPrimaryResume(username, item.id);
 
       setOk(`Pushed to Viewer: ${item.fileName || "Resume"}`);
       await fetchAllAdmin();
@@ -1244,7 +1267,7 @@ const saveEditSkill = (i) => {
     const item = resumeMenuItem;
     closeResumeMenu();
     if (!item?.id) return;
-    await openResumePreviewInline(item.fileName || "Resume", viewResumeByIdUrl(item.id));
+    await openResumePreviewInline(item.fileName || "Resume", viewResumeByIdUrl(username, item.id));
   };
 
   const makePrimaryResume = async () => {
@@ -1256,7 +1279,7 @@ const saveEditSkill = (i) => {
       setErr("");
       setOk("");
       setLoading(true);
-      await setPrimaryResume(item.id);
+      await setPrimaryResume(username, item.id);
       setOk("Primary resume set.");
       await fetchAllAdmin();
       bumpContentVersion();
@@ -1277,7 +1300,7 @@ const saveEditSkill = (i) => {
       setOk("");
       setLoading(true);
 
-      await deleteResumeById(item.id);
+      await deleteResumeById(username, item.id);
 
       setOk("Resume deleted.");
       await fetchAllAdmin();
@@ -1407,11 +1430,14 @@ const saveEditSkill = (i) => {
           {/* ✅ NEW: Eye icon to open Viewer page */}
           <Tooltip title="View Portfolio">
             <IconButton
-              onClick={() => window.open("/", "_blank")}
-              color="inherit"
-            >
-              <MdVisibility />
-            </IconButton>
+  onClick={() => {
+    if (!username) return;
+    window.open(`/${username}`, "_blank");
+  }}
+  color="inherit"
+>
+  <MdVisibility />
+</IconButton>
           </Tooltip>
 
           <Tooltip title={theme.palette.mode === "dark" ? "Switch to Light" : "Switch to Dark"}>
@@ -2582,7 +2608,7 @@ const saveEditSkill = (i) => {
           open={resumePreviewOpen}
           title={resumePreviewTitle}
           onClose={closeResumePreview}
-          url={viewResumeUrl()}
+          url={viewResumeUrl(username)}
           blobUrl={resumePreviewBlobUrl}
           loading={resumePreviewLoading}
         />

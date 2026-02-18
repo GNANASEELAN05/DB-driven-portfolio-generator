@@ -4,45 +4,66 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name="experience_items")
+@Table(
+        name = "experience_items",
+        indexes = {
+                @Index(name = "idx_experience_owner", columnList = "owner_username")
+        }
+)
 public class ExperienceItem {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // MULTI USER OWNER
+    @Column(name = "owner_username", nullable = false)
+    private String ownerUsername;
+
     private String role;
     private String company;
 
-    // 🔥 accept frontend "start"
-    @JsonProperty("start")
-    private String startDate;
+    // 🔥 FIX RESERVED WORD
+    @Column(name = "start_date")
+    private String start;
 
-    // 🔥 accept frontend "end"
-    @JsonProperty("end")
-    private String endDate;
+    // 🔥 FIX RESERVED WORD
+    @Column(name = "end_date")
+    private String end;
 
-    // 🔥 accept frontend "description"
-    @Column(length = 5000)
-    @JsonProperty("description")
-    private String details;
+    @Column(length = 4000)
+    private String description;
 
-    public ExperienceItem() {}
+    // ===== GETTERS =====
 
     public Long getId() { return id; }
 
+    public String getOwnerUsername() { return ownerUsername; }
+
+    @JsonProperty("role")
     public String getRole() { return role; }
-    public void setRole(String role) { this.role = role; }
 
     public String getCompany() { return company; }
+
+    public String getStart() { return start; }
+
+    public String getEnd() { return end; }
+
+    public String getDescription() { return description; }
+
+    // ===== SETTERS =====
+
+    public void setId(Long id) { this.id = id; }
+
+    public void setOwnerUsername(String ownerUsername) { this.ownerUsername = ownerUsername; }
+
+    public void setRole(String role) { this.role = role; }
+
     public void setCompany(String company) { this.company = company; }
 
-    public String getStartDate() { return startDate; }
-    public void setStartDate(String startDate) { this.startDate = startDate; }
+    public void setStart(String start) { this.start = start; }
 
-    public String getEndDate() { return endDate; }
-    public void setEndDate(String endDate) { this.endDate = endDate; }
+    public void setEnd(String end) { this.end = end; }
 
-    public String getDetails() { return details; }
-    public void setDetails(String details) { this.details = details; }
+    public void setDescription(String description) { this.description = description; }
 }
