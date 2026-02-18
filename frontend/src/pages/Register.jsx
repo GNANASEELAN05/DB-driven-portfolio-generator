@@ -8,7 +8,6 @@ export default function Register() {
     document.title = "Create Portfolio Account";
   }, []);
 
-  // ✅ if already logged in, go straight to dashboard
   React.useEffect(() => {
     const authUser = (localStorage.getItem("auth_user") || "").trim().toLowerCase();
     if (localStorage.getItem("token") && authUser) {
@@ -16,7 +15,7 @@ export default function Register() {
     }
   }, []);
 
-  const [username, setUsername] = useState("");
+  const [username, setUsername] = useState(""); // keep original case
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
@@ -27,7 +26,7 @@ export default function Register() {
     setLoading(true);
 
     try {
-      const u = username.trim().toLowerCase();
+      const u = username.trim().toLowerCase(); // backend safe
 
       const res = await registerUser(u, password);
 
@@ -41,6 +40,7 @@ export default function Register() {
 
       if (!token) {
         setErr("Registration failed. Please try again.");
+        setLoading(false);
         return;
       }
 
@@ -48,8 +48,8 @@ export default function Register() {
       sessionStorage.clear();
       localStorage.setItem("token", token);
       localStorage.setItem("auth_user", u);
+      localStorage.setItem("display_name", username); // preserve case
 
-      // go to admin panel
       window.location.replace(`/${u}/adminpanel`);
     } catch (error) {
       const msg =
@@ -119,7 +119,7 @@ export default function Register() {
               <Typography sx={{ opacity: 0.7, color: "#ddd", textAlign: "center" }}>
                 Create your own username. Your portfolio URL becomes:
                 <br />
-                <b style={{ color: "#fff" }}>/{`{username}`}</b>
+                <b style={{ color: "#fff" }}>/{username || "{username}"}</b>
               </Typography>
             </Stack>
 
@@ -136,7 +136,7 @@ export default function Register() {
                   fullWidth
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  helperText="Allowed: a-z, 0-9, dot, underscore, hyphen (3-30 chars)"
+                  helperText="Spaces allowed. URL auto converts to lowercase"
                   sx={inputStyle}
                 />
 
@@ -171,7 +171,6 @@ export default function Register() {
                   variant="text"
                   onClick={() => {
                     const u = username.trim().toLowerCase();
-                    // ✅ always go to login (generic if username is empty)
                     window.location.href = u ? `/${u}/adminpanel/login` : "/admin-login";
                   }}
                   sx={{ color: "#cbd5e1", fontWeight: 700 }}

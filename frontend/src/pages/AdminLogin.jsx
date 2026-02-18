@@ -27,7 +27,8 @@ export default function AdminLogin() {
     }
   }, []);
 
-  const [username, setUsername] = useState((urlUser || "").trim().toLowerCase());
+  // ❌ removed forced lowercase in UI
+  const [username, setUsername] = useState((urlUser || "").trim());
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
@@ -38,11 +39,12 @@ export default function AdminLogin() {
     setLoading(true);
 
     try {
-      const u = username.trim().toLowerCase();
+      const u = username.trim().toLowerCase(); // only for backend
       const expected = (urlUser || "").trim().toLowerCase();
 
       if (expected && u !== expected) {
         setErr(`Please login using your own URL username: ${expected}`);
+        setLoading(false);
         return;
       }
 
@@ -58,6 +60,7 @@ export default function AdminLogin() {
 
       if (!token) {
         setErr("Invalid username or password");
+        setLoading(false);
         return;
       }
 
@@ -65,6 +68,7 @@ export default function AdminLogin() {
       sessionStorage.clear();
       localStorage.setItem("token", token);
       localStorage.setItem("auth_user", u);
+      localStorage.setItem("display_name", username); // preserve case
 
       window.location.replace(`/${u}/adminpanel`);
     } catch (error) {
@@ -99,7 +103,6 @@ export default function AdminLogin() {
           }}
         >
           <Stack spacing={3}>
-            {/* HEADER */}
             <Stack alignItems="center" spacing={1}>
               <Box
                 sx={{
@@ -129,13 +132,7 @@ export default function AdminLogin() {
                 Admin Portal
               </Typography>
 
-              <Typography
-                sx={{
-                  opacity: 0.7,
-                  color: "#ddd",
-                  textAlign: "center",
-                }}
-              >
+              <Typography sx={{ opacity: 0.7, color: "#ddd", textAlign: "center" }}>
                 Login to manage: <b>{(urlUser || "").trim()}</b>
               </Typography>
             </Stack>
@@ -146,7 +143,6 @@ export default function AdminLogin() {
               </Alert>
             )}
 
-            {/* FORM */}
             <Box component="form" onSubmit={onSubmit}>
               <Stack spacing={2}>
                 <TextField
@@ -196,14 +192,7 @@ export default function AdminLogin() {
           </Stack>
         </Paper>
 
-        <Typography
-          sx={{
-            textAlign: "center",
-            mt: 2,
-            fontSize: 13,
-            color: "#aaa",
-          }}
-        >
+        <Typography sx={{ textAlign: "center", mt: 2, fontSize: 13, color: "#aaa" }}>
           Portfolio Admin Panel • Secure Access
         </Typography>
       </Box>
@@ -211,7 +200,6 @@ export default function AdminLogin() {
   );
 }
 
-/* ---------- INPUT STYLE ---------- */
 const inputStyle = {
   "& .MuiOutlinedInput-root": {
     borderRadius: 3,

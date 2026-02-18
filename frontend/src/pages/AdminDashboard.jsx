@@ -601,6 +601,13 @@ function ResumePreviewDialog({ open, title, onClose, url, blobUrl, loading }) {
 export default function AdminDashboard(props) {
   const navigate = useNavigate();
   const { username } = useParams();
+  // ⭐ get original username (with caps & spaces)
+const displayName =
+  localStorage.getItem("display_name") ||
+  localStorage.getItem("auth_user_original") ||
+  username ||
+  "";
+
 
   // enforce tenant: token user must match URL user
   React.useEffect(() => {
@@ -618,12 +625,15 @@ export default function AdminDashboard(props) {
 
   // ⭐ change browser tab name (ADMIN DASHBOARD)
 React.useEffect(() => {
-  const user = (username || "").trim();
-  if (user) {
-    document.title = `${user} Admin Panel`;
-  } else {
-    document.title = "Admin Panel";
-  }
+  const user =
+  localStorage.getItem("display_name") ||
+  localStorage.getItem("auth_user_original") ||
+  username ||
+  "";
+
+if (user) {
+  document.title = `${user} Admin Panel`;
+}
 }, [username]);
 
   const theme = useTheme();
@@ -1317,7 +1327,9 @@ const saveEditSkill = (i) => {
       <Toolbar sx={{ gap: 1 }}>
         <Avatar sx={{ bgcolor: BRAND_DARK, fontWeight: 950 }}>A</Avatar>
         <Box sx={{ minWidth: 0 }}>
-          <Typography sx={{ fontWeight: 950, lineHeight: 1.1 }}>Admin</Typography>
+<Typography sx={{ fontWeight: 950, lineHeight: 1.1 }}>
+  {displayName}
+</Typography>
           <Typography variant="caption" sx={{ opacity: 0.7 }}>
             Portfolio Manager
           </Typography>

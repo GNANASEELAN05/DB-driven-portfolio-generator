@@ -422,14 +422,25 @@ export default function Home({ toggleTheme }) {
   const navigate = useNavigate();
 
     const { username } = useParams();
+    // ⭐ ORIGINAL display name (with caps & spaces)
+const displayName =
+  localStorage.getItem("display_name") ||
+  localStorage.getItem("auth_user_original") ||
+  username ||
+  "";
+
     // ⭐ Dynamic browser tab title based on URL user
 useEffect(() => {
-  const user = (username || "").trim();
-  if (user) {
-    document.title = `${user} Portfolio`;
-  } else {
-    document.title = "Portfolio";
-  }
+  const user =
+  localStorage.getItem("display_name") ||
+  localStorage.getItem("auth_user_original") ||
+  username ||
+  "";
+
+if (user) {
+  document.title = `${user} Portfolio`;
+}
+
 }, [username]);
 
 const [loading, setLoading] = useState(true);
