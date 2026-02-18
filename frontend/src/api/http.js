@@ -9,7 +9,7 @@ import axios from "axios";
 
 const baseURL =
   import.meta.env.VITE_API_URL ||
-  "http://localhost:8080/api";   // ✅ LOCAL BACKEND
+  "https://db-driven-portfolio-generator-backend.onrender.com/api";   // ✅ LOCAL BACKEND
 
 // axios instance
 const http = axios.create({
