@@ -43,15 +43,15 @@ public class SecurityConfig {
                 // preflight
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                // auth login/register
+                // auth
                 .requestMatchers("/api/auth/**").permitAll()
 
-                // ===== PUBLIC VIEWER (tenant-based) =====
+                // PUBLIC VIEW
                 .requestMatchers(HttpMethod.GET, "/api/u/*/portfolio/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/u/*/projects/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/u/*/resume/**").permitAll()
 
-                // ===== ADMIN (tenant-based) =====
+                // ADMIN
                 .requestMatchers(HttpMethod.POST, "/api/u/*/projects/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PUT,  "/api/u/*/projects/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE,"/api/u/*/projects/**").hasRole("ADMIN")
@@ -71,7 +71,7 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // 🌍 CORS FOR LOCAL + VERCEL LIVE
+    // 🌍 CORS FIXED FOR VERCEL + LOCAL
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration cfg = new CorsConfiguration();
@@ -79,11 +79,11 @@ public class SecurityConfig {
         cfg.setAllowedOrigins(List.of(
             "http://localhost:5173",
             "http://127.0.0.1:5173",
-            "https://gnanaseelan-v-portfolio.vercel.app"
+            "https://portfolio-generator-by-gnanaseelan.vercel.app"
         ));
 
-        cfg.addAllowedHeader("*");
-        cfg.addAllowedMethod("*");
+        cfg.setAllowedMethods(List.of("*"));
+        cfg.setAllowedHeaders(List.of("*"));
         cfg.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
