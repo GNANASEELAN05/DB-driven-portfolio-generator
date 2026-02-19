@@ -33,6 +33,13 @@ public class AuthController {
         this.passwordEncoder = passwordEncoder;
     }
 
+    // ================= PING (FOR UPTIMEROBOT) =================
+    // This endpoint is SAFE and fast. Use it to keep Render awake.
+    @GetMapping("/ping")
+    public String ping() {
+        return "awake";
+    }
+
     // ================= REGISTER =================
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest req) {
@@ -51,8 +58,7 @@ public class AuthController {
 
         // ✔ allow spaces + capital + small letters
         if (!rawUsername.matches("^[A-Za-z0-9 ._-]+$")) {
-            return ResponseEntity.badRequest()
-                    .body("Username can contain letters, numbers, space, . _ -");
+            return ResponseEntity.badRequest().body("Username can contain letters, numbers, space, . _ -");
         }
 
         // check duplicate (case insensitive)
@@ -67,18 +73,21 @@ public class AuthController {
         userRepository.save(u);
 
         String token = jwtService.generateToken(rawUsername, "ROLE_ADMIN");
-        return ResponseEntity.ok(new LoginResponse(token));
+        return ResponseEntity.ok(new LoginResponse(token, rawUsername));
     }
 
     // ================= LOGIN =================
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest req) {
 
-        String inputUsername = req.getUsername().trim();
+        String inputUsername = req.getUsername() == null ? "" : req.getUsername().trim();
         String lower = inputUsername.toLowerCase();
 
-        User user = userRepository.findByUsernameIgnoreCase(lower)
-                .orElse(null);
+        if (inputUsername.isBlank() || req.getPassword() == null || req.getPassword().isBlank()) {
+            return ResponseEntity.status(401).body("Invalid username or password");
+        }
+
+        User user = userRepository.findByUsernameIgnoreCase(lower).orElse(null);
 
         if (user == null) {
             return ResponseEntity.status(401).body("Invalid username or password");
@@ -87,7 +96,7 @@ public class AuthController {
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
-                            user.getUsername(),   // use stored username
+                            user.getUsername(),   // use stored username (original case)
                             req.getPassword()
                     )
             );
@@ -99,7 +108,9 @@ public class AuthController {
         if (!role.startsWith("ROLE_")) role = "ROLE_" + role;
 
         String token = jwtService.generateToken(user.getUsername(), role);
-        return ResponseEntity.ok(new LoginResponse(token));
+
+        // ✅ return stored username so UI always shows correct case
+        return ResponseEntity.ok(new LoginResponse(token, user.getUsername()));
     }
 
     // ================= LOGIN TEST =================
@@ -107,8 +118,7 @@ public class AuthController {
     public String loginTest(@RequestParam String username,
                             @RequestParam String password) {
 
-        User user = userRepository.findByUsernameIgnoreCase(username.trim().toLowerCase())
-                .orElse(null);
+        User user = userRepository.findByUsernameIgnoreCase(username.trim().toLowerCase()).orElse(null);
 
         if (user == null) return "LOGIN FAILED ❌";
 

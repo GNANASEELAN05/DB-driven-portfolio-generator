@@ -27,7 +27,6 @@ export default function AdminLogin() {
     }
   }, []);
 
-  // ❌ removed forced lowercase in UI
   const [username, setUsername] = useState((urlUser || "").trim());
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -39,16 +38,17 @@ export default function AdminLogin() {
     setLoading(true);
 
     try {
-      const u = username.trim().toLowerCase(); // only for backend
+      const typed = username.trim();              // keep as typed
+      const uLower = typed.toLowerCase();         // only for URL + lookup
       const expected = (urlUser || "").trim().toLowerCase();
 
-      if (expected && u !== expected) {
+      if (expected && uLower !== expected) {
         setErr(`Please login using your own URL username: ${expected}`);
         setLoading(false);
         return;
       }
 
-      const res = await adminLogin(u, password);
+      const res = await adminLogin(uLower, password);
 
       const token =
         res &&
@@ -64,13 +64,19 @@ export default function AdminLogin() {
         return;
       }
 
+      // ✅ backend returns original stored username
+      const serverDisplay =
+        res?.data?.username && typeof res.data.username === "string"
+          ? res.data.username
+          : typed;
+
       localStorage.removeItem("token");
       sessionStorage.clear();
       localStorage.setItem("token", token);
-      localStorage.setItem("auth_user", u);
-      localStorage.setItem("display_name", username); // preserve case
+      localStorage.setItem("auth_user", uLower);          // always lowercase for URL
+      localStorage.setItem("display_name", serverDisplay); // always original from DB
 
-      window.location.replace(`/${u}/adminpanel`);
+      window.location.replace(`/${uLower}/adminpanel`);
     } catch (error) {
       setErr("Invalid username or password");
     } finally {

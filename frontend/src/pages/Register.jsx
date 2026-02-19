@@ -26,9 +26,11 @@ export default function Register() {
     setLoading(true);
 
     try {
-      const u = username.trim().toLowerCase(); // backend safe
+      const typed = username.trim();
+      const uLower = typed.toLowerCase(); // only for URL routing
 
-      const res = await registerUser(u, password);
+      // ✅ IMPORTANT: send ORIGINAL to backend so it stores correct case
+      const res = await registerUser(typed, password);
 
       const token =
         res &&
@@ -44,13 +46,19 @@ export default function Register() {
         return;
       }
 
+      // ✅ backend returns original stored username (same as typed)
+      const serverDisplay =
+        res?.data?.username && typeof res.data.username === "string"
+          ? res.data.username
+          : typed;
+
       localStorage.removeItem("token");
       sessionStorage.clear();
       localStorage.setItem("token", token);
-      localStorage.setItem("auth_user", u);
-      localStorage.setItem("display_name", username); // preserve case
+      localStorage.setItem("auth_user", uLower);           // lowercase for URL
+      localStorage.setItem("display_name", serverDisplay); // original for top UI
 
-      window.location.replace(`/${u}/adminpanel`);
+      window.location.replace(`/${uLower}/adminpanel`);
     } catch (error) {
       const msg =
         error?.response?.data && typeof error.response.data === "string"
