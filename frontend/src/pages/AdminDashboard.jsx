@@ -835,30 +835,6 @@ const [editValue, setEditValue] = useState("");
     setPortfolioLoadingPercent(0);
     setPortfolioLoadingText("Preparing portfolio viewer...");
 
-    // open tab immediately on user click so browser won't block it later
-    const viewerTab = window.open("", "_blank");
-
-    // fallback if popup blocked
-    if (viewerTab) {
-      try {
-        viewerTab.document.write(`
-          <html>
-            <head>
-              <title>Opening Portfolio...</title>
-            </head>
-            <body style="margin:0;display:flex;align-items:center;justify-content:center;height:100vh;font-family:Arial,sans-serif;background:#111;color:#fff;">
-              <div style="text-align:center;">
-                <div style="font-size:18px;font-weight:700;margin-bottom:10px;">Opening Portfolio...</div>
-                <div style="font-size:14px;opacity:0.75;">Please wait while your portfolio is being prepared.</div>
-              </div>
-            </body>
-          </html>
-        `);
-        viewerTab.document.close();
-      } catch {}
-    }
-
-    // estimate slower total duration based on connection when available
     const connection =
       navigator.connection ||
       navigator.mozConnection ||
@@ -873,28 +849,28 @@ const [editValue, setEditValue] = useState("");
       if (effectiveType === "slow-2g" || effectiveType === "2g") {
         totalDuration = 50000;
       } else if (effectiveType === "3g" || downlink < 2) {
-        totalDuration = 40000;
+        totalDuration = 42000;
       } else if (effectiveType === "4g" || downlink >= 5) {
         totalDuration = 30000;
       } else {
-        totalDuration = 35000;
+        totalDuration = 36000;
       }
     }
 
     const steps = [
-      { percent: 4, text: "Initializing viewer session..." },
-      { percent: 9, text: "Connecting to portfolio service..." },
-      { percent: 15, text: "Extracting data from database..." },
-      { percent: 22, text: "Reading profile information..." },
-      { percent: 30, text: "Loading project records..." },
-      { percent: 38, text: "Loading achievements..." },
-      { percent: 46, text: "Fixing colors..." },
-      { percent: 54, text: "Fixing layouts..." },
-      { percent: 62, text: "Fixing styles..." },
-      { percent: 70, text: "Mapping links..." },
-      { percent: 78, text: "Preparing resume section..." },
-      { percent: 86, text: "Finalizing portfolio view..." },
-      { percent: 93, text: "Applying last updates..." },
+      { percent: 3, text: "Initializing viewer session..." },
+      { percent: 8, text: "Connecting to portfolio service..." },
+      { percent: 14, text: "Extracting data from database..." },
+      { percent: 21, text: "Reading profile information..." },
+      { percent: 29, text: "Loading project records..." },
+      { percent: 37, text: "Loading achievements..." },
+      { percent: 45, text: "Loading education details..." },
+      { percent: 53, text: "Loading experience details..." },
+      { percent: 61, text: "Fixing colors..." },
+      { percent: 69, text: "Fixing layouts..." },
+      { percent: 77, text: "Fixing styles..." },
+      { percent: 85, text: "Mapping links..." },
+      { percent: 92, text: "Finalizing portfolio view..." },
       { percent: 100, text: "Opening homepage..." },
     ];
 
@@ -902,30 +878,22 @@ const [editValue, setEditValue] = useState("");
     let index = 0;
 
     const runStep = () => {
-      if (portfolioLoadingCancelledRef.current) {
-        if (viewerTab && !viewerTab.closed) {
-          try {
-            viewerTab.close();
-          } catch {}
-        }
-        return;
-      }
+      if (portfolioLoadingCancelledRef.current) return;
 
       const step = steps[index];
 
       if (!step) {
+        const finalUrl = `/${username}`;
         resetPortfolioLoading();
 
-        const finalUrl = `/${username}`;
+        const link = document.createElement("a");
+        link.href = finalUrl;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
 
-        if (viewerTab && !viewerTab.closed) {
-          try {
-            viewerTab.location.href = finalUrl;
-            return;
-          } catch {}
-        }
-
-        navigate(finalUrl);
         return;
       }
 
