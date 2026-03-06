@@ -874,10 +874,12 @@ const [editValue, setEditValue] = useState("");
     setPortfolioReady(false);
   };
 
-  const goToPortfolioPage = () => {
-    if (!username) return;
-    navigate(`/${encodeURIComponent(username)}`);
-  };
+const goToPortfolioPage = () => {
+  if (!username) return;
+
+  const portfolioUrl = `${window.location.origin}/${encodeURIComponent(username)}`;
+  window.open(portfolioUrl, "_blank", "noopener,noreferrer");
+};
   
 
   const cancelPortfolioLoading = () => {
