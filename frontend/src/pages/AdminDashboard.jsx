@@ -841,6 +841,21 @@ const [editValue, setEditValue] = useState("");
   const portfolioLoadingTimerRef = React.useRef(null);
   const portfolioLoadingCancelledRef = React.useRef(false);
 
+
+    const portfolioGeneratedStorageKey = React.useMemo(
+    () => `portfolio_generated_${(username || "").trim().toLowerCase()}`,
+    [username]
+  );
+
+  const [portfolioGenerated, setPortfolioGenerated] = useState(() => {
+    const currentUser =
+      (localStorage.getItem("auth_user") || "").trim().toLowerCase() ||
+      (window.location.pathname.split("/")[1] || "").trim().toLowerCase();
+    return localStorage.getItem(`portfolio_generated_${currentUser}`) === "1";
+  });
+
+  const [portfolioAlreadyDialogOpen, setPortfolioAlreadyDialogOpen] = useState(false);
+
   const handleDrawerToggle = () => setMobileOpen((p) => !p);
 
     const clearPortfolioLoadingTimer = () => {
@@ -859,6 +874,12 @@ const [editValue, setEditValue] = useState("");
     setPortfolioReady(false);
   };
 
+  const goToPortfolioPage = () => {
+    if (!username) return;
+    navigate(`/${encodeURIComponent(username)}`);
+  };
+  
+
   const cancelPortfolioLoading = () => {
     portfolioLoadingCancelledRef.current = true;
     resetPortfolioLoading();
@@ -867,6 +888,11 @@ const [editValue, setEditValue] = useState("");
 
   const startPortfolioLoading = () => {
     if (!username || portfolioLoadingOpen) return;
+
+    if (portfolioGenerated) {
+      setPortfolioAlreadyDialogOpen(true);
+      return;
+    }
 
     portfolioLoadingCancelledRef.current = false;
     setPortfolioLoadingOpen(true);
@@ -924,11 +950,18 @@ const [editValue, setEditValue] = useState("");
       if (!step) {
         clearPortfolioLoadingTimer();
         setPortfolioReady(true);
+        setPortfolioGenerated(true);
+        localStorage.setItem(portfolioGeneratedStorageKey, "1");
         return;
       }
 
       setPortfolioLoadingPercent(step.percent);
       setPortfolioLoadingText(step.text);
+
+      if (step.percent === 100) {
+        setPortfolioGenerated(true);
+        localStorage.setItem(portfolioGeneratedStorageKey, "1");
+      }
 
       index += 1;
       portfolioLoadingTimerRef.current = setTimeout(runStep, perStepDelay);
@@ -937,15 +970,12 @@ const [editValue, setEditValue] = useState("");
     portfolioLoadingTimerRef.current = setTimeout(runStep, perStepDelay);
   };
 
-
     const openGeneratedPortfolio = () => {
     if (!portfolioReady || !username) return;
 
-    const finalUrl = `${window.location.origin}/${encodeURIComponent(username)}`;
-    window.open(finalUrl, "_blank", "noopener,noreferrer");
-
     setOk("Portfolio opened successfully.");
     resetPortfolioLoading();
+    navigate(`/${encodeURIComponent(username)}`);
   };
 
   React.useEffect(() => {
@@ -1693,12 +1723,30 @@ const saveEditSkill = (i) => {
             sx={{
               borderRadius: 999,
               fontWeight: 950,
-              background: `linear-gradient(135deg, ${BRAND_PRIMARY}, ${BRAND_DARK})`,
+              background: portfolioGenerated
+                ? "linear-gradient(135deg, rgba(160,160,160,0.95), rgba(120,120,120,0.95))"
+                : `linear-gradient(135deg, ${BRAND_PRIMARY}, ${BRAND_DARK})`,
               textTransform: "none",
             }}
           >
             Generate Portfolio
           </Button>
+
+          {portfolioGenerated ? (
+            <Tooltip title="View Portfolio">
+              <IconButton
+                onClick={goToPortfolioPage}
+                color="inherit"
+                disabled={portfolioLoadingOpen}
+                sx={{
+                  border: "1px solid rgba(122,63,145,0.28)",
+                  borderRadius: 999,
+                }}
+              >
+                <MdVisibility />
+              </IconButton>
+            </Tooltip>
+          ) : null}
 
           <Tooltip title={theme.palette.mode === "dark" ? "Switch to Light" : "Switch to Dark"}>
                         <IconButton onClick={toggleTheme} color="inherit" disabled={portfolioLoadingOpen}>
@@ -2909,6 +2957,55 @@ const saveEditSkill = (i) => {
             onClose={() => setConfirmOpen(false)}
             onConfirm={confirmPayload.onConfirm || (() => setConfirmOpen(false))}
           />
+
+
+                    <Dialog
+            open={portfolioAlreadyDialogOpen}
+            onClose={() => setPortfolioAlreadyDialogOpen(false)}
+            fullWidth
+            maxWidth="xs"
+          >
+            <DialogTitle sx={{ fontWeight: 950 }}>
+              Portfolio Already Generated
+            </DialogTitle>
+
+            <DialogContent>
+              <Typography variant="body2" sx={{ opacity: 0.85 }}>
+                Your portfolio is already generated. You cannot generate it again.
+                If you want to view your portfolio, use the eye icon.
+              </Typography>
+            </DialogContent>
+
+            <DialogActions sx={{ p: 2 }}>
+              <Button
+                onClick={goToPortfolioPage}
+                variant="outlined"
+                size="small"
+                startIcon={<MdVisibility />}
+                sx={{
+                  borderRadius: 999,
+                  fontWeight: 950,
+                  borderColor: "rgba(122,63,145,0.55)",
+                  color: BRAND_PRIMARY,
+                }}
+              >
+                View Portfolio
+              </Button>
+
+              <Button
+                onClick={() => setPortfolioAlreadyDialogOpen(false)}
+                variant="contained"
+                size="small"
+                sx={{
+                  borderRadius: 999,
+                  fontWeight: 950,
+                  background: `linear-gradient(135deg, ${BRAND_PRIMARY}, ${BRAND_DARK})`,
+                }}
+              >
+                OK
+              </Button>
+            </DialogActions>
+          </Dialog>
 
           <PortfolioLoadingDialog
             open={portfolioLoadingOpen}
