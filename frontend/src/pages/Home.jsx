@@ -495,7 +495,7 @@ const [loading, setLoading] = useState(true);
   }, [resumeDownloadBase, contentVersion]);
 
   // ✅ FIX: use the real /view endpoint + cache bust
-  const resumeViewBase = useMemo(() => viewResumeUrl(username), []);
+  const resumeViewBase = useMemo(() => viewResumeUrl(username), [username]);
   const resumeViewUrlBusted = useMemo(() => {
     const joiner = resumeViewBase.includes("?") ? "&" : "?";
     return `${resumeViewBase}${joiner}v=${encodeURIComponent(contentVersion)}&t=${Date.now()}`;

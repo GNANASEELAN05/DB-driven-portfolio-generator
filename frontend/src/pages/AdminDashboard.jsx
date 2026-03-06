@@ -604,7 +604,9 @@ function PortfolioLoadingDialog({
   open,
   percent,
   text,
+  ready,
   onCancel,
+  onOpenPortfolio,
 }) {
   return (
     <Dialog
@@ -648,6 +650,40 @@ function PortfolioLoadingDialog({
           >
             {text}
           </Typography>
+
+          <Stack
+            direction="row"
+            spacing={1}
+            alignItems="center"
+            justifyContent="center"
+            flexWrap="wrap"
+            sx={{ minHeight: 28 }}
+          >
+            <Typography
+              variant="body2"
+              sx={{
+                fontWeight: 900,
+                opacity: ready ? 1 : 0.45,
+              }}
+            >
+              Your portfolio is ready
+            </Typography>
+
+            <Button
+              onClick={onOpenPortfolio}
+              variant="contained"
+              size="small"
+              disabled={!ready}
+              sx={{
+                borderRadius: 999,
+                fontWeight: 950,
+                minWidth: 140,
+                background: `linear-gradient(135deg, ${BRAND_PRIMARY}, ${BRAND_DARK})`,
+              }}
+            >
+              Open Portfolio
+            </Button>
+          </Stack>
         </Stack>
       </DialogContent>
 
@@ -801,6 +837,7 @@ const [editValue, setEditValue] = useState("");
   const [portfolioLoadingOpen, setPortfolioLoadingOpen] = useState(false);
   const [portfolioLoadingPercent, setPortfolioLoadingPercent] = useState(0);
   const [portfolioLoadingText, setPortfolioLoadingText] = useState("");
+  const [portfolioReady, setPortfolioReady] = useState(false);
   const portfolioLoadingTimerRef = React.useRef(null);
   const portfolioLoadingCancelledRef = React.useRef(false);
 
@@ -819,12 +856,13 @@ const [editValue, setEditValue] = useState("");
     setPortfolioLoadingOpen(false);
     setPortfolioLoadingPercent(0);
     setPortfolioLoadingText("");
+    setPortfolioReady(false);
   };
 
   const cancelPortfolioLoading = () => {
     portfolioLoadingCancelledRef.current = true;
     resetPortfolioLoading();
-    setOk("Portfolio opening cancelled.");
+    setOk("Portfolio generation cancelled.");
   };
 
   const startPortfolioLoading = () => {
@@ -834,13 +872,14 @@ const [editValue, setEditValue] = useState("");
     setPortfolioLoadingOpen(true);
     setPortfolioLoadingPercent(0);
     setPortfolioLoadingText("Preparing portfolio viewer...");
+    setPortfolioReady(false);
 
     const connection =
       navigator.connection ||
       navigator.mozConnection ||
       navigator.webkitConnection;
 
-    let totalDuration = 30000; // minimum 30 sec
+    let totalDuration = 30000;
 
     if (connection) {
       const effectiveType = connection.effectiveType || "";
@@ -871,7 +910,7 @@ const [editValue, setEditValue] = useState("");
       { percent: 77, text: "Fixing styles..." },
       { percent: 85, text: "Mapping links..." },
       { percent: 92, text: "Finalizing portfolio view..." },
-      { percent: 100, text: "Opening homepage..." },
+      { percent: 100, text: "Portfolio generated successfully." },
     ];
 
     const perStepDelay = Math.floor(totalDuration / steps.length);
@@ -883,17 +922,8 @@ const [editValue, setEditValue] = useState("");
       const step = steps[index];
 
       if (!step) {
-        const finalUrl = `/${username}`;
-        resetPortfolioLoading();
-
-        const link = document.createElement("a");
-        link.href = finalUrl;
-        link.target = "_blank";
-        link.rel = "noopener noreferrer";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
+        clearPortfolioLoadingTimer();
+        setPortfolioReady(true);
         return;
       }
 
@@ -905,6 +935,17 @@ const [editValue, setEditValue] = useState("");
     };
 
     portfolioLoadingTimerRef.current = setTimeout(runStep, perStepDelay);
+  };
+
+
+    const openGeneratedPortfolio = () => {
+    if (!portfolioReady || !username) return;
+
+    const finalUrl = `${window.location.origin}/${encodeURIComponent(username)}`;
+    window.open(finalUrl, "_blank", "noopener,noreferrer");
+
+    setOk("Portfolio opened successfully.");
+    resetPortfolioLoading();
   };
 
   React.useEffect(() => {
@@ -1644,17 +1685,20 @@ const saveEditSkill = (i) => {
           </Typography>
 
           {/* ✅ NEW: Eye icon to open Viewer page */}
-                   <Tooltip title="View Portfolio">
-            <span>
-              <IconButton
-                onClick={startPortfolioLoading}
-                color="inherit"
-                disabled={portfolioLoadingOpen}
-              >
-                <MdVisibility />
-              </IconButton>
-            </span>
-          </Tooltip>
+          <Button
+            onClick={startPortfolioLoading}
+            variant="contained"
+            size="small"
+            disabled={portfolioLoadingOpen}
+            sx={{
+              borderRadius: 999,
+              fontWeight: 950,
+              background: `linear-gradient(135deg, ${BRAND_PRIMARY}, ${BRAND_DARK})`,
+              textTransform: "none",
+            }}
+          >
+            Generate Portfolio
+          </Button>
 
           <Tooltip title={theme.palette.mode === "dark" ? "Switch to Light" : "Switch to Dark"}>
                         <IconButton onClick={toggleTheme} color="inherit" disabled={portfolioLoadingOpen}>
@@ -2866,11 +2910,13 @@ const saveEditSkill = (i) => {
             onConfirm={confirmPayload.onConfirm || (() => setConfirmOpen(false))}
           />
 
-                    <PortfolioLoadingDialog
+          <PortfolioLoadingDialog
             open={portfolioLoadingOpen}
             percent={portfolioLoadingPercent}
             text={portfolioLoadingText}
+            ready={portfolioReady}
             onCancel={cancelPortfolioLoading}
+            onOpenPortfolio={openGeneratedPortfolio}
           />
         </Container>
       </Box>
