@@ -621,7 +621,7 @@ function PortfolioLoadingDialog({
       }}
     >
       <DialogTitle sx={{ fontWeight: 950 }}>
-        Opening Portfolio
+        Creating Portfolio
       </DialogTitle>
 
       <DialogContent sx={{ pt: 1.5 }}>
