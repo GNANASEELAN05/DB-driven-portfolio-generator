@@ -34,7 +34,7 @@ import { startPremiumPayment } from "../api/payment";
 // ─────────────────────────────────────────────────────────────────────────────
 
 const BACKEND_BASE = (
-  import.meta.env.VITE_API_URL || "https://portfolio-backend-cok2.onrender.com/api"
+  import.meta.env.VITE_API_URL || "https://db-driven-portfolio-generator-multiuser.onrender.com/api"
 ).replace(/\/api$/, "");
 
 // ← CHANGE THESE TWO LINES to your actual PDF paths (see options above)
