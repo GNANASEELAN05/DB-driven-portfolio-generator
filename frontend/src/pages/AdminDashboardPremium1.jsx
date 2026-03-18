@@ -216,7 +216,7 @@ function SimpleItemDialog({ open, title, children, onClose, onSave, saveText = "
       className={isDark ? "p1-dialog" : "p1-dialog p1-dialog-light"}
     >
       <DialogTitle className="p1-dialog-title" sx={{ pb: 1 }}>{title}</DialogTitle>
-      <DialogContent sx={{ pt: 2 }}>{children}</DialogContent>
+      <DialogContent sx={{ pt: 4, overflow: "visible" }}>{children}</DialogContent>
       <DialogActions sx={{ p: 2, gap: 1 }}>
         <Button onClick={onClose} size="small" className="p1-btn-outlined" startIcon={<MdClose />}>Cancel</Button>
         <Button onClick={onSave} size="small" className="p1-btn-primary" startIcon={<MdSave />}>{saveText}</Button>
@@ -270,7 +270,7 @@ function ProjectEditorDialog({ open, mode, initial, onClose, onSave }) {
         {mode === "edit" ? "Edit Project" : "Add Project"}
       </DialogTitle>
 
-      <DialogContent sx={{ pt: 2 }}>
+      <DialogContent sx={{ pt: 4, overflow: "visible" }}>
         <Grid container spacing={2}>
           <Grid item xs={12} md={6}><SmallTextField label="Project Title" value={form.title} onChange={handleChange("title")} /></Grid>
           <Grid item xs={12} md={6}><SmallTextField label="Tech Stack (comma separated)" value={form.tech} onChange={handleChange("tech")} /></Grid>
@@ -387,12 +387,71 @@ function ResumeUploadSuccessDialog({ open, fileName, onClose }) {
   );
 }
 
+
+// ── SkillEditRow — isolated so its own state changes don't re-render the parent ──
+function SkillEditRow({ skill, index, isEditing, initialValue, isDark, onStartEdit, onSave, onCancel, onDelete }) {
+  const [localVal, setLocalVal] = React.useState(initialValue);
+
+  React.useEffect(() => {
+    if (isEditing) setLocalVal(initialValue);
+  }, [isEditing, initialValue]);
+
+  return (
+    <TableRow className="p1-tr" sx={{ "& .MuiTableCell-root": { verticalAlign: "middle" } }}>
+      <TableCell className={`p1-td ${isDark ? "" : "p1-td-light"}`} sx={{ fontWeight: 800, textTransform: "capitalize", verticalAlign: "middle" }}>
+        {skill.category}
+      </TableCell>
+      <TableCell className={`p1-td ${isDark ? "" : "p1-td-light"}`} sx={{ verticalAlign: "middle" }}>
+        {isEditing ? (
+          <input
+            autoFocus
+            value={localVal}
+            onChange={(e) => setLocalVal(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") onSave(localVal);
+              if (e.key === "Escape") onCancel();
+            }}
+            style={{
+              background: "rgba(45,212,191,0.06)",
+              border: "1.5px solid rgba(45,212,191,0.45)",
+              borderRadius: "8px",
+              color: "inherit",
+              fontSize: "14px",
+              padding: "7px 12px",
+              width: "100%",
+              outline: "none",
+              fontFamily: "inherit",
+              boxSizing: "border-box",
+            }}
+          />
+        ) : skill.name}
+      </TableCell>
+      <TableCell className={`p1-td ${isDark ? "" : "p1-td-light"}`} sx={{ verticalAlign: "middle" }}>
+        <Stack direction="row" spacing={0.8}>
+          {isEditing ? (
+            <>
+              <IconButton size="small" sx={{ color: "#4ade80" }} onClick={() => onSave(localVal)}><MdSave /></IconButton>
+              <IconButton size="small" sx={{ color: "#f97316" }} onMouseDown={(e) => { e.preventDefault(); onCancel(); }}><MdClose /></IconButton>
+            </>
+          ) : (
+            <IconButton size="small" className={`p1-icon-btn ${isDark ? "" : "p1-icon-btn-light"}`} onClick={onStartEdit}><MdEdit /></IconButton>
+          )}
+          <IconButton size="small" className="p1-icon-btn-err" onClick={onDelete}><MdDelete /></IconButton>
+        </Stack>
+      </TableCell>
+    </TableRow>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // MAIN EXPORT — AdminDashboardPremium1
 // ═══════════════════════════════════════════════════════════════════════════
 export default function AdminDashboardPremium1(props) {
   const { username } = useParams();
-  React.useEffect(() => { document.title = `${username || "Admin"} · Admin Panel · Premium`; }, [username]);
+  React.useEffect(() => {
+  const displayName = username ? username.charAt(0).toUpperCase() + username.slice(1) : "Admin";
+  document.title = `${displayName} · Admin Panel · Premium`;
+}, [username]);
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
@@ -920,7 +979,9 @@ try { setErr(""); setOk(""); setLoading(true); const payload = education.map(({ 
       <Box className={`p1-drawer-header ${isDark ? "" : "p1-drawer-header-light"}`}>
         <Avatar className="p1-drawer-avatar"><MdWorkspacePremium size={20} /></Avatar>
         <Box className="p1-drawer-brand-text">
-          <Typography className="p1-drawer-brand-name">{username || "Admin"}</Typography>
+          <Typography className="p1-drawer-brand-name">
+  {username ? username.charAt(0).toUpperCase() + username.slice(1) : "Admin"}
+</Typography>
           <Typography className="p1-drawer-brand-sub">Premium · Portfolio Manager</Typography>
         </Box>
       </Box>
@@ -1266,25 +1327,21 @@ try { setErr(""); setOk(""); setLoading(true); const payload = education.map(({ 
                   <TableBody>
                     {skillTable.length === 0 && <TRow><TC colSpan={3} sx={{ opacity: 0.5 }}>No skills added</TC></TRow>}
                     {skillTable.map((s, i) => (
-                      <TRow key={i}>
-                        <TC bold sx={{ textTransform: "capitalize" }}>{s.category}</TC>
-                        <TC>
-                          {editIndex === i
-                            ? <SmallTextField value={editValue} onChange={(e) => setEditValue(e.target.value)} />
-                            : s.name}
-                        </TC>
-                        <TC>
-                          <Stack direction="row" spacing={0.8}>
-                            {editIndex === i ? (
-                              <>
-                                <IconButton size="small" sx={{ color: "#4ade80" }} onClick={() => saveEditSkill(i)}><MdSave /></IconButton>
-                                <IconButton size="small" sx={{ color: "#f97316" }} onClick={() => setEditIndex(null)}><MdClose /></IconButton>
-                              </>
-                            ) : <IconEdit onClick={() => startEditSkill(i)} />}
-                            <IconDel onClick={() => deleteSkill(i)} />
-                          </Stack>
-                        </TC>
-                      </TRow>
+                      <SkillEditRow
+                        key={i}
+                        skill={s}
+                        index={i}
+                        isEditing={editIndex === i}
+                        initialValue={editIndex === i ? editValue : s.name}
+                        isDark={isDark}
+                        onStartEdit={() => startEditSkill(i)}
+                        onSave={(val) => {
+                          setSkillTable(p => p.map((x, idx) => idx === i ? { ...x, name: val } : x));
+                          setEditIndex(null);
+                        }}
+                        onCancel={() => setEditIndex(null)}
+                        onDelete={() => deleteSkill(i)}
+                      />
                     ))}
                   </TableBody>
                 </Table>

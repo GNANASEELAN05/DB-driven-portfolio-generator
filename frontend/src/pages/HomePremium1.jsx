@@ -20,8 +20,9 @@ import {
   MdDarkMode, MdWork, MdSchool, MdEmojiEvents,
   MdPerson, MdContacts, MdBusiness, MdCalendarToday,
   MdStar, MdLink, MdAdminPanelSettings,
-  MdHub, MdFlashOn, MdArrowOutward, MdMenu, MdKeyboardArrowDown,
+  MdHub, MdFlashOn, MdArrowOutward, MdMenu, MdKeyboardArrowDown,MdTerminal,
   MdAutoAwesome, MdRefresh, MdVisibility, MdTimeline,
+  MdSettings,
 } from "react-icons/md";
 import { FaGithub, FaLinkedin, FaGlobe, FaCode, FaLayerGroup } from "react-icons/fa";
 import "./HomePremium1.css";
@@ -272,6 +273,144 @@ function ResumePreviewDialog({ open, title, onClose, url, blobUrl, loading }) {
     </Dialog>
   );
 }
+
+
+// ── Devicon slug resolver (same logic as SkillsBucket.jsx) ────────────────────
+function sp1ToDeviconSlug(name) {
+  const raw = String(name || "").trim().toLowerCase();
+  const overrides = {
+    "html": "html5", "html5": "html5",
+    "css": "css3", "css3": "css3",
+    "js": "javascript", "javascript": "javascript",
+    "javascript (js)": "javascript",
+    "node": "nodejs", "node.js": "nodejs", "nodejs": "nodejs",
+    "react": "react", "react.js": "react", "reactjs": "react",
+    "next.js": "nextjs", "nextjs": "nextjs",
+    "vue": "vuejs", "vue.js": "vuejs", "vuejs": "vuejs",
+    "tailwind": "tailwindcss", "tailwindcss": "tailwindcss",
+    "tailwind css": "tailwindcss",
+    "express": "express", "express.js": "express",
+    "postgres": "postgresql", "postgresql": "postgresql",
+    "mysql": "mysql", "sql": "mysql",
+    "mongodb": "mongodb",
+    "firebase": "firebase",
+    "c++": "cplusplus", "c#": "csharp",
+    "c": "c",
+    "java": "java",
+    "python": "python",
+    "typescript": "typescript", "ts": "typescript",
+    "android studio": "androidstudio",
+    "vs code": "vscode", "vscode": "vscode", "vs": "vscode",
+    "visual studio code": "vscode",
+    "git": "git", "github": "github",
+    "docker": "docker",
+    "aws": "amazonwebservices",
+    "google cloud": "googlecloud", "gcp": "googlecloud",
+    "spring boot": "spring", "springboot": "spring",
+    "spring": "spring",
+    "three.js": "threejs", "threejs": "threejs",
+    "nuxt.js": "nuxtjs", "nuxt": "nuxtjs",
+    "angular": "angular",
+    "flutter": "flutter", "dart": "dart",
+    "kotlin": "kotlin", "swift": "swift",
+    "rust": "rust", "go": "go", "golang": "go",
+    "php": "php", "laravel": "laravel",
+    "redis": "redis",
+    "graphql": "graphql",
+    "figma": "figma",
+    "postman": "postman",
+    "linux": "linux",
+    "bootstrap": "bootstrap",
+    "sass": "sass", "scss": "sass",
+    "webpack": "webpack", "vite": "vitejs",
+    "jest": "jest",
+    "kubernetes": "kubernetes", "k8s": "kubernetes",
+    "nginx": "nginx",
+    "netlify": "netlify", "vercel": "vercel",
+    "heroku": "heroku",
+    "nosql": null, "no sql": null,
+    "sql server": "microsoftsqlserver",
+    "sqlite": "sqlite",
+    "redux": "redux",
+    "svelte": "svelte",
+    "astro": "astro",
+    "nestjs": "nestjs", "nest.js": "nestjs",
+    "fastapi": "fastapi",
+    "django": "django",
+    "flask": "flask",
+    "rails": "rails", "ruby on rails": "rails",
+    "ruby": "ruby",
+    "scala": "scala",
+    "terraform": "terraform",
+    "ansible": "ansible",
+    "jenkins": "jenkins",
+    "gitlab": "gitlab",
+    "bitbucket": "bitbucket",
+    "jira": "jira",
+    "confluence": "confluence",
+    "remix": "remix",
+    "gatsby": "gatsby",
+  };
+  if (raw in overrides) return overrides[raw];
+  return raw
+    .replace(/\.js$/i, "js")
+    .replace(/\./g, "")
+    .replace(/\s+/g, "")
+    .replace(/[^a-z0-9]/g, "");
+}
+
+function sp1ResolveLogoUrls(name) {
+  const slug = sp1ToDeviconSlug(name);
+  if (!slug) return [];
+  return [
+    `https://cdn.jsdelivr.net/gh/devicons/devicon/icons/${slug}/${slug}-original.svg`,
+    `https://cdn.jsdelivr.net/gh/devicons/devicon/icons/${slug}/${slug}-plain.svg`,
+    `https://cdn.jsdelivr.net/gh/devicons/devicon/icons/${slug}/${slug}-original-wordmark.svg`,
+    `https://cdn.jsdelivr.net/gh/devicons/devicon/icons/${slug}/${slug}-plain-wordmark.svg`,
+  ];
+}
+
+// ── Skill logo card with multi-URL fallback (mirrors SkillsBucket.jsx) ────────
+function Sp1SkillLogoCard({ chip, ci, rowIdx, accent }) {
+  const urls = sp1ResolveLogoUrls(chip);
+  const [urlIdx, setUrlIdx] = useState(0);
+  const initials = String(chip || "").slice(0, 2).toUpperCase();
+  const currentUrl = urls[urlIdx] || null;
+
+  return (
+    <div
+      className="sp1-skf-logo-card"
+      style={{ animationDelay: `${rowIdx * 0.12 + ci * 0.055}s` }}
+    >
+      <div className="sp1-skf-logo-inner">
+        <div
+          className="sp1-skf-logo-glow-ring"
+          style={{ background: `linear-gradient(135deg, ${accent}, transparent, transparent)` }}
+        />
+        <div className="sp1-skf-logo-icon-wrap">
+          {currentUrl ? (
+            <img
+              key={currentUrl}
+              src={currentUrl}
+              alt={chip}
+              className="sp1-skf-logo-img"
+              onError={() => setUrlIdx(p => p + 1)}
+              loading="lazy"
+            />
+          ) : (
+            <div className="sp1-skf-logo-fallback">{initials}</div>
+          )}
+        </div>
+        <span className="sp1-skf-logo-name">{chip}</span>
+        <span
+          className="sp1-skf-logo-dot"
+          style={{ background: accent, boxShadow: `0 0 5px ${accent}` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 export default function HomePremium1({ toggleTheme }) {
@@ -625,252 +764,579 @@ const onPreviewResume = async () => {
         )}
       </nav>
 
-      {/* ══ HERO ════════════════════════════════════════════════════════════ */}
-      <section id="sp1-sec-hero" className="sp1-section sp1-hero-section">
-        <div className="sp1-hero-card">
-          {/* macOS bar on hero */}
-          <MacBar label={`${(name || "portfolio").toLowerCase().replace(/\s+/g, "_")}.jsx`} live />
+{/* ══ HERO ════════════════════════════════════════════════════════════ */}
+<section id="sp1-sec-hero" className="sp1-section sp1-hero-section">
+  <div className="sp1-hero-card">
+    <MacBar label={`${(name || "portfolio").toUpperCase().replace(/\s+/g, "_")}`} live />
 
-          <div className="sp1-hero-inner">
+    {/* Holographic grid floor */}
+    <div className="sp1-hero-holo-floor">
+      <div className="sp1-holo-lines-h" />
+      <div className="sp1-holo-lines-v" />
+      <div className="sp1-holo-center-glow" />
+    </div>
 
-            {/* Left: identity */}
-            <div className="sp1-hero-left">
-              <div className="sp1-hero-eyebrow">
-                <span className="sp1-eyebrow-dot" />
-                {titleText}
-              </div>
+    {/* Floating particle dots */}
+    {[...Array(12)].map((_, i) => (
+      <div key={i} className="sp1-hero-particle" style={{ "--pi": i }} />
+    ))}
 
-              <h1 className="sp1-hero-name">
-                {(name).split(" ").map((word, i) => (
-                  <span key={i} className="sp1-name-word" style={{ "--d": `${i * 0.12}s` }}>
-                    {i === 0 ? word : (
-                      <span className="sp1-name-accent">{word}</span>
-                    )}
-                  </span>
-                ))}
-              </h1>
+    <div className="sp1-hero-inner">
 
-              {/* Name divider beam */}
-              <div className="sp1-hero-divider" />
+      {/* ── LEFT column: avatar + rings ── */}
+      <div className="sp1-hero-avatar-col">
+        <div className="sp1-hero-orbital-wrap">
+          {/* Outer data rings */}
+          <div className="sp1-hor sp1-hor1" />
+          <div className="sp1-hor sp1-hor2" />
+          <div className="sp1-hor sp1-hor3" />
+          <div className="sp1-hor sp1-hor4" />
 
-              {tagline && <p className="sp1-hero-tagline">{tagline}</p>}
+          {/* Orbiting dots */}
+          <div className="sp1-hod sp1-hod1"><span /></div>
+          <div className="sp1-hod sp1-hod2"><span /></div>
+          <div className="sp1-hod sp1-hod3"><span /></div>
+          <div className="sp1-hod sp1-hod4"><span /></div>
 
-              <div className="sp1-hero-meta">
-                {location && (
-                  <span className="sp1-meta-item">
-                    <MdLocationOn size={13} />{location}
-                  </span>
-                )}
-                {emailPublic && (
-                  <span className="sp1-meta-item">
-                    <MdEmail size={13} />{emailPublic}
-                  </span>
-                )}
-              </div>
-
-              {/* CTA buttons */}
-              <div className="sp1-hero-cta">
-                <button className="sp1-cta-primary" onClick={() => scrollTo("about")}>
-                  Explore <MdKeyboardArrowDown size={15} />
-                </button>
-                <button className="sp1-cta-secondary" onClick={onDownloadResume} disabled={downloading}>
-                  <MdDownload size={15} />
-                  {downloading ? "Downloading…" : `Download (${resumeName})`}
-                </button>
-<button
-  type="button"
-  className="sp1-cta-ghost"
-  onClick={onPreviewResume}
->
-  <MdVisibility size={15} /> Preview CV
-</button>
-              </div>
-
-              {/* Social icons */}
-              <div className="sp1-hero-socials">
-                {safe(socials?.github) && (
-                  <a href={safe(socials.github)} target="_blank" rel="noopener noreferrer"
-                    className="sp1-social-btn" title="GitHub">
-                    <FaGithub size={16} />
-                  </a>
-                )}
-                {safe(socials?.linkedin) && (
-                  <a href={safe(socials.linkedin)} target="_blank" rel="noopener noreferrer"
-                    className="sp1-social-btn" title="LinkedIn">
-                    <FaLinkedin size={16} />
-                  </a>
-                )}
-                {contactEmail && (
-                  <a href={`mailto:${contactEmail}`} className="sp1-social-btn" title="Email">
-                    <MdEmail size={16} />
-                  </a>
-                )}
-                {safe(socials?.website) && (
-                  <a href={safe(socials.website)} target="_blank" rel="noopener noreferrer"
-                    className="sp1-social-btn" title="Website">
-                    <FaGlobe size={15} />
-                  </a>
-                )}
-                {safe(socials?.phone) && (
-                  <a href={`tel:${safe(socials.phone)}`} className="sp1-social-btn" title="Phone">
-                    <MdPhone size={15} />
-                  </a>
-                )}
-              </div>
+          {/* Avatar core */}
+          <div className="sp1-hero-avatar-core">
+            <div className="sp1-hav-shimmer" />
+            <div className="sp1-hav-initials">
+              {safe(profile?.initials) ||
+                (name || username || "").slice(0, 2).toUpperCase()}
             </div>
-
-            {/* Center: orbital avatar */}
-            <div className="sp1-hero-center">
-              <div className="sp1-orbital">
-                <div className="sp1-or sp1-or1" />
-                <div className="sp1-or sp1-or2" />
-                <div className="sp1-or sp1-or3" />
-                <div className="sp1-od sp1-od1"><span /></div>
-                <div className="sp1-od sp1-od2"><span /></div>
-                <div className="sp1-od sp1-od3"><span /></div>
-                <div className="sp1-avatar-frame">
-                  <div className="sp1-avatar-initials">
-                    {safe(profile?.initials) ||
-                      (name || username || "").slice(0, 2).toUpperCase()}
-                  </div>
-                </div>
-                <div className="sp1-status-badge">
-                  <span className="sp1-status-pulse" />
-                  Available
-                </div>
-              </div>
-            </div>
-
-            {/* Right: stats */}
-            <div className="sp1-hero-right">
-              <div className="sp1-stat-grid">
-                {[
-                  { n: experience.length,   l: "Roles",    c: "var(--sp1-coral)"    },
-                  { n: projects.length,     l: "Projects", c: "var(--sp1-electric)" },
-                  { n: achievements.length, l: "Awards",   c: "var(--sp1-gold)"     },
-                  { n: education.length,    l: "Degrees",  c: "var(--sp1-lime)"     },
-                ].filter(s => s.n > 0).map((s, i) => (
-                  <div key={i} className="sp1-stat-card" style={{ "--c": s.c }}>
-                    <span className="sp1-stat-n">{s.n}</span>
-                    <span className="sp1-stat-l">{s.l}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="sp1-hero-skill-preview">
-                <div className="sp1-sp-label">Top Skills</div>
-                <div className="sp1-sp-chips">
-                  {parseList(skills.frontend).slice(0, 3).map((s, i) => (
-                    <span key={i} className="sp1-chip sp1-chip-fe">{s}</span>
-                  ))}
-                  {parseList(skills.backend).slice(0, 2).map((s, i) => (
-                    <span key={i} className="sp1-chip sp1-chip-be">{s}</span>
-                  ))}
-                  {parseList(skills.tools).slice(0, 2).map((s, i) => (
-                    <span key={i} className="sp1-chip sp1-chip-tool">{s}</span>
-                  ))}
-                </div>
-              </div>
-            </div>
+            <div className="sp1-hav-scanline" />
           </div>
 
-          {/* Hero corner brackets */}
-          <div className="sp1-hero-corner sp1-hc-tl" />
-          <div className="sp1-hero-corner sp1-hc-tr" />
-          <div className="sp1-hero-corner sp1-hc-bl" />
-          <div className="sp1-hero-corner sp1-hc-br" />
-          <div className="sp1-hero-prism" />
+          {/* Status badge */}
+          <div className="sp1-hero-status">
+            <span className="sp1-status-pulse" />
+            Available for work
+          </div>
+
+          {/* HUD corner labels */}
+          <div className="sp1-hud-label sp1-hud-tl">SYS://LIVE</div>
+          <div className="sp1-hud-label sp1-hud-tr">v2.0</div>
+          <div className="sp1-hud-label sp1-hud-bl">READY</div>
+          <div className="sp1-hud-label sp1-hud-br">∞</div>
         </div>
-      </section>
+      </div>
 
-      {/* ══ ABOUT ══════════════════════════════════════════════════════════ */}
-      {about && (
-        <section id="sp1-sec-about" className="sp1-section">
-          <div className="sp1-section-inner">
-            <SectionTitle title="About Me" icon={<MdPerson size={18} />} accent="var(--sp1-coral)" />
-            <GlassCard sx={{ padding: "28px 32px" }}>
-              <p className="sp1-about-text">{about}</p>
-            </GlassCard>
+      {/* ── CENTER column: identity ── */}
+      <div className="sp1-hero-identity">
+
+        {/* Eyebrow */}
+        <div className="sp1-hero-eyebrow">
+          <span className="sp1-eyebrow-dot" />
+          {titleText}
+          <span className="sp1-eyebrow-tail" />
+        </div>
+
+        {/* Name */}
+        <h1 className="sp1-hero-name">
+          {(name).split(" ").map((word, i) => (
+            <span key={i} className="sp1-name-word" style={{ "--d": `${i * 0.12}s` }}>
+              {i === 0 ? word : <span className="sp1-name-accent">{word}</span>}
+            </span>
+          ))}
+        </h1>
+
+        {/* Glitch underline beam */}
+        <div className="sp1-hero-beam-line">
+          <div className="sp1-beam-core" />
+          <div className="sp1-beam-glow" />
+        </div>
+
+        {tagline && <p className="sp1-hero-tagline">{tagline}</p>}
+
+        {/* Meta row */}
+        <div className="sp1-hero-meta">
+          {location && (
+            <span className="sp1-meta-item">
+              <MdLocationOn size={13} />{location}
+            </span>
+          )}
+          {emailPublic && (
+            <span className="sp1-meta-item">
+              <MdEmail size={13} />{emailPublic}
+            </span>
+          )}
+        </div>
+
+        {/* CTA row */}
+        <div className="sp1-hero-cta">
+          <button className="sp1-cta-primary" onClick={() => scrollTo("about")}>
+            Explore <MdKeyboardArrowDown size={15} />
+          </button>
+          <button className="sp1-cta-secondary" onClick={onDownloadResume} disabled={downloading}>
+            <MdDownload size={15} />
+            {downloading ? "Downloading…" : `Download CV`}
+          </button>
+          <button type="button" className="sp1-cta-ghost" onClick={onPreviewResume}>
+            <MdVisibility size={15} /> Preview
+          </button>
+        </div>
+
+        {/* Socials */}
+        <div className="sp1-hero-socials">
+          {safe(socials?.github) && (
+            <a href={safe(socials.github)} target="_blank" rel="noopener noreferrer"
+              className="sp1-social-btn" title="GitHub"><FaGithub size={16} /></a>
+          )}
+          {safe(socials?.linkedin) && (
+            <a href={safe(socials.linkedin)} target="_blank" rel="noopener noreferrer"
+              className="sp1-social-btn" title="LinkedIn"><FaLinkedin size={16} /></a>
+          )}
+          {contactEmail && (
+            <a href={`mailto:${contactEmail}`} className="sp1-social-btn" title="Email">
+              <MdEmail size={16} /></a>
+          )}
+          {safe(socials?.website) && (
+            <a href={safe(socials.website)} target="_blank" rel="noopener noreferrer"
+              className="sp1-social-btn" title="Website"><FaGlobe size={15} /></a>
+          )}
+          {safe(socials?.phone) && (
+            <a href={`tel:${safe(socials.phone)}`} className="sp1-social-btn" title="Phone">
+              <MdPhone size={15} /></a>
+          )}
+        </div>
+      </div>
+
+      {/* ── RIGHT column: terminal data panel ── */}
+      <div className="sp1-hero-data-panel">
+        <div className="sp1-dp-bar">
+          <div className="sp1-dp-bar-dots">
+            <span /><span /><span />
           </div>
-        </section>
-      )}
+          <span className="sp1-dp-live">LIVE</span>
+        </div>
 
-      {/* ══ SKILLS ══════════════════════════════════════════════════════════ */}
-      {(parseList(skills.frontend).length > 0 || parseList(skills.backend).length > 0 || parseList(skills.tools).length > 0) && (
-        <section id="sp1-sec-skills" className="sp1-section sp1-section-alt">
-          <div className="sp1-section-inner">
-            <SectionTitle title="Skills" icon={<MdCode size={18} />} accent="var(--sp1-electric)" />
-            <GlassCard sx={{ padding: "0" }}>
-              <div className="sp1-skills-table-wrap">
-                <table className="sp1-skills-table">
-                  <thead>
-                    <tr>
-                      <th>Category</th>
-                      <th>Skills</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {skillCategoryRows.filter(r => r.value !== "—").map((r, i) => (
-                      <tr key={i}>
-                        <td className="sp1-skills-cat">{r.category}</td>
-                        <td className="sp1-skills-val">{r.value}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+<div className="sp1-dp-body">
+
+          {/* Skill stream */}
+          <div className="sp1-dp-block">
+            <div className="sp1-dp-skill-rows">
+              {[
+                ...parseList(skills.frontend).slice(0, 3).map(s => ({ s, type: "fe" })),
+                ...parseList(skills.backend).slice(0, 2).map(s => ({ s, type: "be" })),
+                ...parseList(skills.tools).slice(0, 2).map(s => ({ s, type: "tool" })),
+              ].length > 0
+                ? [
+                    ...parseList(skills.frontend).slice(0, 3).map(s => ({ s, type: "fe" })),
+                    ...parseList(skills.backend).slice(0, 2).map(s => ({ s, type: "be" })),
+                    ...parseList(skills.tools).slice(0, 2).map(s => ({ s, type: "tool" })),
+                  ].map(({ s, type }, i) => (
+                    <div key={i} className={`sp1-dp-skill-row sp1-dp-skill-${type}`}
+                      style={{ "--sri": i }}>
+                      <span className="sp1-dp-skill-dot" />
+                      <span className="sp1-dp-skill-name">{s}</span>
+                      <span className="sp1-dp-skill-bar">
+                        <span className="sp1-dp-skill-fill" style={{
+                          "--fill-w": `${72 + Math.sin(i * 1.4) * 22}%`
+                        }} />
+                      </span>
+                    </div>
+                  ))
+                : ["React", "Node.js", "Python", "MongoDB", "Docker"].map((s, i) => (
+                    <div key={i} className={`sp1-dp-skill-row sp1-dp-skill-${["fe","fe","be","be","tool"][i]}`}
+                      style={{ "--sri": i }}>
+                      <span className="sp1-dp-skill-dot" />
+                      <span className="sp1-dp-skill-name">{s}</span>
+                      <span className="sp1-dp-skill-bar">
+                        <span className="sp1-dp-skill-fill" style={{ "--fill-w": `${90 - i * 8}%` }} />
+                      </span>
+                    </div>
+                  ))
+              }
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="sp1-dp-divider" />
+
+          {/* System status block */}
+          <div className="sp1-dp-block">
+            <div className="sp1-dp-status-rows">
+              {[
+                { key: "uptime",   val: "99.9%",   c: "var(--sp1-lime)" },
+                { key: "mode",     val: "BUILD",    c: "var(--sp1-electric)" },
+                { key: "focus",    val: "FRONTEND", c: "var(--sp1-coral)" },
+                { key: "commits",  val: "∞",        c: "var(--sp1-gold)" },
+              ].map(({ key, val, c }, i) => (
+                <div key={i} className="sp1-dp-status-row" style={{ "--sri": i }}>
+                  <span className="sp1-dp-status-key">{key}</span>
+                  <span className="sp1-dp-status-sep">·····</span>
+                  <span className="sp1-dp-status-val" style={{ color: c }}>{val}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="sp1-dp-divider" />
+
+          {/* Activity bar */}
+          <div className="sp1-dp-block">
+            <div className="sp1-dp-activity">
+              {[...Array(28)].map((_, i) => (
+                <div key={i} className="sp1-dp-act-bar"
+                  style={{
+                    "--ah": `${20 + Math.abs(Math.sin(i * 0.7)) * 80}%`,
+                    "--ac2": i % 3 === 0
+                      ? "var(--sp1-coral)"
+                      : i % 3 === 1
+                        ? "var(--sp1-electric)"
+                        : "var(--sp1-violet)",
+                    "--adi": i,
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Scan line */}
+          <div className="sp1-dp-scanbeam" />
+        </div>
+
+        {/* Corner accents */}
+        <span className="sp1-dpc sp1-dpc-tl" />
+        <span className="sp1-dpc sp1-dpc-tr" />
+        <span className="sp1-dpc sp1-dpc-bl" />
+        <span className="sp1-dpc sp1-dpc-br" />
+      </div>
+
+    </div>
+
+    {/* Hero corner brackets */}
+    <div className="sp1-hero-corner sp1-hc-tl" />
+    <div className="sp1-hero-corner sp1-hc-tr" />
+    <div className="sp1-hero-corner sp1-hc-bl" />
+    <div className="sp1-hero-corner sp1-hc-br" />
+    <div className="sp1-hero-prism" />
+  </div>
+</section>
+
+{/* ══ ABOUT ══════════════════════════════════════════════════════════ */}
+{about && (
+  <section id="sp1-sec-about" className="sp1-section">
+    <div className="sp1-section-inner">
+      <SectionTitle title="About Me" icon={<MdPerson size={18} />} accent="var(--sp1-coral)" />
+
+      <div className="sp1-about-holo-wrap">
+
+        {/* Left: Avatar / Identity Card */}
+        <div className="sp1-about-id-card">
+          <div className="sp1-id-ring">
+            <div className="sp1-id-ring-inner">
+              <div className="sp1-id-avatar-glow" />
+              <MdPerson size={52} className="sp1-id-icon" />
+            </div>
+            <svg className="sp1-id-ring-svg" viewBox="0 0 120 120">
+              <circle cx="60" cy="60" r="54" className="sp1-ring-track" />
+              <circle cx="60" cy="60" r="54" className="sp1-ring-progress" />
+            </svg>
+          </div>
+
+          <div className="sp1-id-label">
+            <span className="sp1-id-name">{profile?.name || "Developer"}</span>
+            <span className="sp1-id-role">{profile?.title || "Frontend Engineer"}</span>
+          </div>
+
+          <div className="sp1-id-stats">
+            {[
+              { label: "STATUS", value: "ONLINE" },
+              { label: "MODE", value: "BUILD" },
+              { label: "STACK", value: "REACT" },
+            ].map(({ label, value }) => (
+              <div className="sp1-id-stat" key={label}>
+                <span className="sp1-stat-label">{label}</span>
+                <span className="sp1-stat-value">{value}</span>
               </div>
-            </GlassCard>
+            ))}
           </div>
-        </section>
-      )}
+        </div>
 
-      {/* ══ EXPERIENCE ══════════════════════════════════════════════════════ */}
+        {/* Right: Bio Terminal */}
+        <div className="sp1-about-terminal">
+          <div className="sp1-terminal-bar">
+            <div className="sp1-term-dots">
+              <span /><span /><span />
+            </div>
+            <span className="sp1-term-title">bio.sys — decrypting…</span>
+            <span className="sp1-term-badge">LIVE</span>
+          </div>
+
+          <div className="sp1-terminal-body">
+
+            <div className="sp1-scan-beam" />
+
+            <p className="sp1-about-bio">{about}</p>
+
+            <div className="sp1-term-footer">
+              <span className="sp1-footer-line">
+
+              </span>
+              <span className="sp1-blink-cursor">▋</span>
+            </div>
+          </div>
+
+          {/* Corner accents */}
+          <span className="sp1-corner sp1-tl" />
+          <span className="sp1-corner sp1-tr" />
+          <span className="sp1-corner sp1-bl" />
+          <span className="sp1-corner sp1-br" />
+        </div>
+
+      </div>
+    </div>
+  </section>
+)}
+
+{/* ══ SKILLS ══════════════════════════════════════════════════════════ */}
+{(parseList(skills.frontend).length > 0 ||
+  parseList(skills.backend).length > 0 ||
+  parseList(skills.database).length > 0 ||
+  parseList(skills.tools).length > 0) && (
+  <section id="sp1-sec-skills" className="sp1-section sp1-section-alt">
+    <div className="sp1-section-inner">
+      <SectionTitle title="Skills" icon={<MdCode size={18} />} accent="var(--sp1-electric)" />
+
+      <div className="sp1-skt-timeline">
+        <div className="sp1-skt-spine" />
+
+        {skillCategoryRows.filter(r => r.value !== "—").map((row, rowIdx) => {
+          const chips = row.value.split(" · ").map(s => s.trim()).filter(Boolean);
+          const isEven = rowIdx % 2 === 0;
+
+          const accentCycle = [
+            { color: "var(--sp1-electric)", glow: "rgba(6,182,212,0.30)",   bg: "rgba(6,182,212,0.10)",   border: "rgba(6,182,212,0.38)"  },
+            { color: "var(--sp1-coral)",    glow: "rgba(241,48,36,0.28)",   bg: "rgba(241,48,36,0.09)",   border: "rgba(241,48,36,0.36)"  },
+            { color: "var(--sp1-violet)",   glow: "rgba(168,85,247,0.26)",  bg: "rgba(168,85,247,0.08)",  border: "rgba(168,85,247,0.34)" },
+            { color: "var(--sp1-lime)",     glow: "rgba(16,185,129,0.26)",  bg: "rgba(16,185,129,0.08)",  border: "rgba(16,185,129,0.34)" },
+          ];
+          const ac = accentCycle[rowIdx % accentCycle.length];
+
+          const catIcons = [<MdCode size={16} />, <MdTerminal size={16} />, <FaLayerGroup size={14} />, <MdSettings size={16} />];
+          const catIcon = catIcons[rowIdx % catIcons.length];
+
+          return (
+            <div
+              key={rowIdx}
+              className={`sp1-skt-item${isEven ? " sp1-skt-left" : " sp1-skt-right"}`}
+              style={{
+                "--i": rowIdx,
+                "--sk-color":  ac.color,
+                "--sk-glow":   ac.glow,
+                "--sk-bg":     ac.bg,
+                "--sk-border": ac.border,
+              }}
+            >
+              {/* Timeline node */}
+              <div className="sp1-skt-node">
+                <div className="sp1-skt-node-ring sp1-sknr1" />
+                <div className="sp1-skt-node-ring sp1-sknr2" />
+                <div className="sp1-skt-node-core">{catIcon}</div>
+              </div>
+
+              {/* Card */}
+              <div className="sp1-skt-card">
+                <div className="sp1-skt-prism" />
+                <div className="sp1-skt-corner sp1-corner-tl" />
+                <div className="sp1-skt-corner sp1-corner-br" />
+
+                {/* Top bar */}
+                <div className="sp1-skt-card-bar">
+                  <div className="sp1-skt-bar-dots">
+                    <span className="sp1-dot sp1-dot-red" />
+                    <span className="sp1-dot sp1-dot-yellow" />
+                    <span className="sp1-dot sp1-dot-green" />
+                  </div>
+                  <span className="sp1-skt-bar-label">
+                    {`SKILL_CAT_${String(rowIdx + 1).padStart(2, "0")}`}
+                  </span>
+                  <span className="sp1-skt-count-chip">
+                    {String(chips.length).padStart(2, "0")} tools
+                  </span>
+                </div>
+
+                {/* Card body */}
+                <div className="sp1-skt-card-body">
+
+                  {/* Category header */}
+                  <div className="sp1-skt-header-row">
+                    <div className="sp1-skt-medal-wrap">
+                      <div className="sp1-skt-medal-ring sp1-smtr1" />
+                      <div className="sp1-skt-medal-ring sp1-smtr2" />
+                      <div className="sp1-skt-medal-core">{catIcon}</div>
+                    </div>
+                    <div className="sp1-skt-title-block">
+                      <h4 className="sp1-skt-cat-title">{row.category}</h4>
+                      <div className="sp1-skt-cat-sub-row">
+                        <span className="sp1-skt-cat-sub-dot" />
+                        <span className="sp1-skt-cat-sub">{chips.length} technologies</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="sp1-skt-divider" />
+
+                  {/* Logo cards grid */}
+                  <div className="sp1-skt-logo-grid">
+                    {chips.map((chip, ci) => (
+                      <Sp1SkillLogoCard
+                        key={ci}
+                        chip={chip}
+                        ci={ci}
+                        rowIdx={rowIdx}
+                        accent={ac.color}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Footer */}
+                  <div className="sp1-skt-card-footer">
+                    <div className="sp1-skt-index-badge">
+                      <span className="sp1-skt-index-hash">#</span>
+                      <span className="sp1-skt-index-num">{String(rowIdx + 1).padStart(2, "0")}</span>
+                    </div>
+                    <div className="sp1-skt-footer-tag">
+                      <span className="sp1-skt-footer-dot" />
+                      {row.category} Stack
+                    </div>
+                    <div className="sp1-skt-scan-dots">
+                      <span /><span /><span />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  </section>
+)}
+
+{/* ══ EXPERIENCE ══════════════════════════════════════════════════════ */}
       {experience.length > 0 && (
         <section id="sp1-sec-exp" className="sp1-section">
           <div className="sp1-section-inner">
             <SectionTitle title="Experience" icon={<MdTimeline size={18} />} accent="var(--sp1-orange)" />
-            <div className="sp1-exp-list">
-              {experience.map((e, i) => (
-                <div key={e?.id ?? i} className="sp1-exp-card" style={{ "--i": i }}>
-                  <MacBar label={`${safe(e?.role) || "Role"} @ ${safe(e?.company) || "Company"}`} live={isCurrent(e)} />
-                  <div className="sp1-exp-body">
-                    <div className="sp1-exp-left">
-                      <div className="sp1-exp-orb">
-                        <div className="sp1-exp-orb-ring sp1-eor1" />
-                        <div className="sp1-exp-orb-ring sp1-eor2" />
-                        <div className="sp1-exp-orb-core">
-                          {isCurrent(e) ? <MdFlashOn size={14} /> : <MdWork size={12} />}
-                        </div>
+
+            <div className="sp1-exp-timeline">
+              <div className="sp1-exp-spine" />
+
+              {experience.map((e, i) => {
+                const isEven = i % 2 === 0;
+                const expColors = [
+                  { color: "var(--sp1-coral)",    glow: "rgba(241,48,36,0.30)",   bg: "rgba(241,48,36,0.10)",   border: "rgba(241,48,36,0.38)"  },
+                  { color: "var(--sp1-orange)",   glow: "rgba(249,115,22,0.28)",  bg: "rgba(249,115,22,0.09)",  border: "rgba(249,115,22,0.36)" },
+                  { color: "var(--sp1-electric)", glow: "rgba(6,182,212,0.26)",   bg: "rgba(6,182,212,0.08)",   border: "rgba(6,182,212,0.34)"  },
+                  { color: "var(--sp1-lime)",     glow: "rgba(16,185,129,0.26)",  bg: "rgba(16,185,129,0.08)",  border: "rgba(16,185,129,0.34)" },
+                  { color: "var(--sp1-violet)",   glow: "rgba(168,85,247,0.26)",  bg: "rgba(168,85,247,0.08)",  border: "rgba(168,85,247,0.34)" },
+                  { color: "var(--sp1-gold)",     glow: "rgba(251,191,36,0.26)",  bg: "rgba(251,191,36,0.08)",  border: "rgba(251,191,36,0.34)" },
+                ];
+                const ec = expColors[i % expColors.length];
+                const current = isCurrent(e);
+
+                return (
+                  <div
+                    key={e?.id ?? i}
+                    className={`sp1-exp-item${isEven ? " sp1-exp-left" : " sp1-exp-right"}`}
+                    style={{
+                      "--i": i,
+                      "--ec-color":  ec.color,
+                      "--ec-glow":   ec.glow,
+                      "--ec-bg":     ec.bg,
+                      "--ec-border": ec.border,
+                    }}
+                  >
+                    {/* Timeline node */}
+                    <div className="sp1-exp-node">
+                      <div className="sp1-exp-node-ring sp1-exnr1" />
+                      <div className="sp1-exp-node-ring sp1-exnr2" />
+                      <div className="sp1-exp-node-core">
+                        {current ? <MdFlashOn size={15} /> : <MdWork size={13} />}
                       </div>
+                      {current && <div className="sp1-exp-node-pulse" />}
                     </div>
-                    <div className="sp1-exp-content">
-                      <div className="sp1-exp-role-row">
-                        <h3 className="sp1-exp-role">{safe(e?.role) || "Role"}</h3>
-                        {isCurrent(e) && (
+
+                    {/* Card */}
+                    <div className="sp1-exp-card">
+                      <div className="sp1-exp-prism" />
+                      <div className="sp1-exp-corner sp1-corner-tl" />
+                      <div className="sp1-exp-corner sp1-corner-br" />
+
+                      {/* Top bar */}
+                      <div className="sp1-exp-card-bar">
+                        <div className="sp1-exp-bar-dots">
+                          <span className="sp1-dot sp1-dot-red" />
+                          <span className="sp1-dot sp1-dot-yellow" />
+                          <span className="sp1-dot sp1-dot-green" />
+                        </div>
+                        <span className="sp1-exp-bar-label">
+                          {`${safe(e?.role) || "role"} @ ${safe(e?.company) || "company"}`}
+                        </span>
+                        {current && (
                           <span className="sp1-live-pill">
-                            <span className="sp1-live-dot" />Active
+                            <span className="sp1-live-dot" />
+                            ACTIVE
                           </span>
                         )}
                       </div>
-                      <div className="sp1-exp-company">
-                        <MdBusiness size={12} />
-                        <span>{safe(e?.company)}</span>
+
+                      {/* Card body */}
+                      <div className="sp1-exp-card-body">
+
+                        {/* Role + company row */}
+                        <div className="sp1-exp-role-block">
+                          <div className="sp1-exp-role-beam" />
+                          <div className="sp1-exp-role-text">
+                            <h3 className="sp1-exp-role">{safe(e?.role) || "Role"}</h3>
+                            <div className="sp1-exp-company-row">
+                              <div className="sp1-exp-company-icon">
+                                <MdBusiness size={12} />
+                              </div>
+                              <span className="sp1-exp-company-name">{safe(e?.company)}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Dates */}
+                        <div className="sp1-exp-dates-chip">
+                          <MdCalendarToday size={10} />
+                          <span>
+                            {safe(e?.start)}{safe(e?.end) ? ` — ${safe(e.end)}` : " — Present"}
+                          </span>
+                        </div>
+
+                        {/* Divider */}
+                        <div className="sp1-exp-card-divider" />
+
+                        {/* Description */}
+                        {safe(e?.description) && (
+                          <p className="sp1-exp-desc">{safe(e.description)}</p>
+                        )}
+
+                        {/* Footer */}
+                        <div className="sp1-exp-card-footer">
+                          <div className="sp1-exp-index-badge">
+                            <span className="sp1-exp-index-hash">#</span>
+                            <span className="sp1-exp-index-num">{String(i + 1).padStart(2, "0")}</span>
+                          </div>
+                          <div className="sp1-exp-footer-tag">
+                            <span className="sp1-exp-footer-dot" />
+                            {current ? "Current Role" : "Past Role"}
+                          </div>
+                          <div className="sp1-exp-scan-dots">
+                            <span /><span /><span />
+                          </div>
+                        </div>
                       </div>
-                      <div className="sp1-exp-dates">
-                        <MdCalendarToday size={11} />
-                        <span>
-                          {safe(e?.start)}{safe(e?.end) ? ` – ${safe(e.end)}` : " – Present"}
-                        </span>
-                      </div>
-                      {safe(e?.description) && (
-                        <p className="sp1-exp-desc">{safe(e.description)}</p>
-                      )}
                     </div>
                   </div>
-                  <div className="sp1-exp-corner sp1-corner-tl" />
-                  <div className="sp1-exp-corner sp1-corner-br" />
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </section>
@@ -890,123 +1356,320 @@ const onPreviewResume = async () => {
         </section>
       )}
 
-      {/* ══ ACHIEVEMENTS ════════════════════════════════════════════════════ */}
+{/* ══ ACHIEVEMENTS ════════════════════════════════════════════════════ */}
       {achievements.length > 0 && (
-        <section id="sp1-sec-ach" className="sp1-section">
+        <section id="sp1-sec-ach" className="sp1-section sp1-section-alt">
           <div className="sp1-section-inner">
             <SectionTitle title="Achievements" icon={<MdEmojiEvents size={18} />} accent="var(--sp1-gold)" />
-            <div className="sp1-ach-grid">
-              {achievements.map((a, i) => (
-                <div key={a?.id ?? i} className="sp1-ach-card" style={{ "--i": i }}>
-                  <div className="sp1-ach-top-bar">
-                    <div className="sp1-ach-icon">
-                      <MdStar size={18} />
-                    </div>
-                    {(safe(a?.date) || safe(a?.year)) && (
-                      <span className="sp1-ach-year">{safe(a?.date) || safe(a?.year)}</span>
-                    )}
-                  </div>
-                  <div className="sp1-ach-body">
-                    <h4 className="sp1-ach-title">{safe(a?.title) || "Achievement"}</h4>
-                    {safe(a?.issuer) && (
-                      <div className="sp1-ach-issuer">
-                        <span className="sp1-ach-beam" />
-                        {safe(a.issuer)}
+
+            <div className="sp1-ach-timeline">
+              <div className="sp1-ach-spine" />
+
+              {achievements.map((a, i) => {
+                const isEven = i % 2 === 0;
+                const accentCycle = [
+                  { color: "var(--sp1-gold)",     glow: "rgba(251,191,36,0.30)",  bg: "rgba(251,191,36,0.10)",  border: "rgba(251,191,36,0.38)" },
+                  { color: "var(--sp1-coral)",    glow: "rgba(241,48,36,0.28)",   bg: "rgba(241,48,36,0.09)",   border: "rgba(241,48,36,0.36)"  },
+                  { color: "var(--sp1-electric)", glow: "rgba(6,182,212,0.26)",   bg: "rgba(6,182,212,0.08)",   border: "rgba(6,182,212,0.34)"  },
+                  { color: "var(--sp1-violet)",   glow: "rgba(168,85,247,0.26)",  bg: "rgba(168,85,247,0.08)",  border: "rgba(168,85,247,0.34)" },
+                  { color: "var(--sp1-lime)",     glow: "rgba(16,185,129,0.26)",  bg: "rgba(16,185,129,0.08)",  border: "rgba(16,185,129,0.34)" },
+                  { color: "var(--sp1-orange)",   glow: "rgba(249,115,22,0.26)",  bg: "rgba(249,115,22,0.08)",  border: "rgba(249,115,22,0.34)" },
+                ];
+                const ac = accentCycle[i % accentCycle.length];
+                const rankLabels = ["I","II","III","IV","V","VI","VII","VIII","IX","X"];
+
+                return (
+                  <div
+                    key={a?.id ?? i}
+                    className={`sp1-acht-item${isEven ? " sp1-acht-left" : " sp1-acht-right"}`}
+                    style={{
+                      "--i": i,
+                      "--ac-color":  ac.color,
+                      "--ac-glow":   ac.glow,
+                      "--ac-bg":     ac.bg,
+                      "--ac-border": ac.border,
+                    }}
+                  >
+                    {/* Timeline node */}
+                    <div className="sp1-acht-node">
+                      <div className="sp1-acht-node-ring sp1-atnr1" />
+                      <div className="sp1-acht-node-ring sp1-atnr2" />
+                      <div className="sp1-acht-node-core">
+                        <MdStar size={16} />
                       </div>
-                    )}
-                    {safe(a?.description) && (
-                      <p className="sp1-ach-desc">{safe(a.description)}</p>
-                    )}
-                  </div>
-                  {safe(a?.link) && (
-                    <div className="sp1-ach-actions">
-                      <a
-                        href={safe(a.link)}
-                        target="_blank" rel="noopener noreferrer"
-                        className="sp1-ach-link"
-                      >
-                        <MdLink size={12} /> View
-                      </a>
                     </div>
-                  )}
-                  <div className="sp1-ach-prism" />
-                  <div className="sp1-ach-corner sp1-corner-tl" />
-                  <div className="sp1-ach-corner sp1-corner-br" />
-                </div>
-              ))}
+
+                    {/* Card */}
+                    <div className="sp1-acht-card">
+                      <div className="sp1-acht-prism" />
+                      <div className="sp1-acht-corner sp1-corner-tl" />
+                      <div className="sp1-acht-corner sp1-corner-br" />
+
+                      {/* Rank watermark */}
+                      <span className="sp1-acht-rank-watermark">
+                        {rankLabels[i] ?? i + 1}
+                      </span>
+
+                      {/* Top bar */}
+                      <div className="sp1-acht-card-bar">
+                        <div className="sp1-acht-bar-dots">
+                          <span className="sp1-dot sp1-dot-red" />
+                          <span className="sp1-dot sp1-dot-yellow" />
+                          <span className="sp1-dot sp1-dot-green" />
+                        </div>
+                        <span className="sp1-acht-bar-label">
+                          {`AWARD_${String(i + 1).padStart(2, "0")}`}
+                        </span>
+                        {(safe(a?.date) || safe(a?.year)) && (
+                          <div className="sp1-acht-date-chip">
+                            <MdCalendarToday size={9} />
+                            <span>{safe(a?.date) || safe(a?.year)}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Card body */}
+                      <div className="sp1-acht-card-body">
+
+                        {/* Medal + title row */}
+                        <div className="sp1-acht-header-row">
+                          <div className="sp1-acht-medal-wrap">
+                            <div className="sp1-acht-medal-ring sp1-amtr1" />
+                            <div className="sp1-acht-medal-ring sp1-amtr2" />
+                            <div className="sp1-acht-medal-core">
+                              <MdEmojiEvents size={18} />
+                            </div>
+                          </div>
+                          <div className="sp1-acht-title-block">
+                            <h4 className="sp1-acht-title">
+                              {safe(a?.title) || "Achievement"}
+                            </h4>
+                            {safe(a?.issuer) && (
+                              <div className="sp1-acht-issuer-row">
+                                <span className="sp1-acht-issuer-dot" />
+                                <span className="sp1-acht-issuer-name">
+                                  {safe(a.issuer)}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Divider */}
+                        <div className="sp1-acht-divider" />
+
+                        {/* Description */}
+                        {safe(a?.description) && (
+                          <p className="sp1-acht-desc">{safe(a.description)}</p>
+                        )}
+
+                        {/* Footer */}
+                        <div className="sp1-acht-card-footer">
+                          <div className="sp1-acht-index-badge">
+                            <span className="sp1-acht-index-hash">#</span>
+                            <span className="sp1-acht-index-num">
+                              {String(i + 1).padStart(2, "0")}
+                            </span>
+                          </div>
+                          {safe(a?.link) && (
+                            <a
+                              href={safe(a.link)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="sp1-acht-view-btn"
+                            >
+                              <span>View Certificate</span>
+                              <MdLink size={12} />
+                              <span className="sp1-acht-btn-glow" />
+                            </a>
+                          )}
+                          <div className="sp1-acht-scan-dots">
+                            <span /><span /><span />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </section>
       )}
 
-      {/* ══ EDUCATION ══════════════════════════════════════════════════════ */}
+{/* ══ EDUCATION ══════════════════════════════════════════════════════ */}
       {education.length > 0 && (
         <section id="sp1-sec-edu" className="sp1-section sp1-section-alt">
           <div className="sp1-section-inner">
             <SectionTitle title="Education" icon={<MdSchool size={18} />} accent="var(--sp1-violet)" />
-            <div className="sp1-edu-list">
-              {education.map((e, i) => (
-                <div key={e?.id ?? i} className="sp1-edu-card" style={{ "--i": i }}>
-                  <div className="sp1-edu-num">0{i + 1}</div>
-                  <div className="sp1-edu-body">
-                    <MacBar label={`DEGREE_${String(i + 1).padStart(2, "0")}`} />
-                    <div className="sp1-edu-content">
-                      <h3 className="sp1-edu-degree">{safe(e?.degree) || "Degree"}</h3>
-                      <div className="sp1-edu-inst">
-                        <MdBusiness size={12} />
-                        <span>{safe(e?.institution)}</span>
+
+            {/* Timeline spine */}
+            <div className="sp1-edu-timeline">
+              <div className="sp1-edu-spine" />
+
+              {education.map((e, i) => {
+                const isEven = i % 2 === 0;
+                const degreeColors = [
+                  { color: "var(--sp1-violet)", glow: "rgba(168,85,247,0.30)", bg: "rgba(168,85,247,0.10)", border: "rgba(168,85,247,0.38)" },
+                  { color: "var(--sp1-electric)", glow: "rgba(6,182,212,0.28)", bg: "rgba(6,182,212,0.09)", border: "rgba(6,182,212,0.36)" },
+                  { color: "var(--sp1-lime)",    glow: "rgba(16,185,129,0.26)", bg: "rgba(16,185,129,0.08)", border: "rgba(16,185,129,0.34)" },
+                  { color: "var(--sp1-gold)",    glow: "rgba(251,191,36,0.26)", bg: "rgba(251,191,36,0.08)", border: "rgba(251,191,36,0.34)" },
+                ];
+                const dc = degreeColors[i % degreeColors.length];
+
+                return (
+                  <div
+                    key={e?.id ?? i}
+                    className={`sp1-edu-item${isEven ? " sp1-edu-left" : " sp1-edu-right"}`}
+                    style={{
+                      "--i": i,
+                      "--dc-color":  dc.color,
+                      "--dc-glow":   dc.glow,
+                      "--dc-bg":     dc.bg,
+                      "--dc-border": dc.border,
+                    }}
+                  >
+                    {/* Timeline node */}
+                    <div className="sp1-edu-node">
+                      <div className="sp1-edu-node-ring sp1-enr1" />
+                      <div className="sp1-edu-node-ring sp1-enr2" />
+                      <div className="sp1-edu-node-core">
+                        <MdSchool size={14} />
                       </div>
-                      {safe(e?.year) && (
-                        <span className="sp1-edu-year">
-                          <MdCalendarToday size={11} /> {safe(e.year)}
+                    </div>
+
+                    {/* Card */}
+                    <div className="sp1-edu-card">
+                      <div className="sp1-edu-prism" />
+                      <div className="sp1-edu-corner sp1-corner-tl" />
+                      <div className="sp1-edu-corner sp1-corner-br" />
+
+                      {/* Card top bar */}
+                      <div className="sp1-edu-card-bar">
+                        <div className="sp1-edu-index-orb">
+                          <span>{String(i + 1).padStart(2, "0")}</span>
+                        </div>
+                        <div className="sp1-edu-bar-dots">
+                          <span className="sp1-dot sp1-dot-red" />
+                          <span className="sp1-dot sp1-dot-yellow" />
+                          <span className="sp1-dot sp1-dot-green" />
+                        </div>
+                        <span className="sp1-edu-bar-label">
+                          {`DEGREE_${String(i + 1).padStart(2, "0")}`}
                         </span>
-                      )}
-                      {safe(e?.details) && (
-                        <p className="sp1-edu-details">{safe(e.details)}</p>
-                      )}
+                        {safe(e?.year) && (
+                          <div className="sp1-edu-year-chip">
+                            <MdCalendarToday size={9} />
+                            <span>{safe(e.year)}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Card body */}
+                      <div className="sp1-edu-card-body">
+                        {/* Degree title */}
+                        <h3 className="sp1-edu-degree">{safe(e?.degree) || "Degree"}</h3>
+
+                        {/* Institution row */}
+                        {safe(e?.institution) && (
+                          <div className="sp1-edu-inst-row">
+                            <div className="sp1-edu-inst-icon">
+                              <MdBusiness size={13} />
+                            </div>
+                            <span className="sp1-edu-inst-name">{safe(e.institution)}</span>
+                          </div>
+                        )}
+
+                        {/* Divider */}
+                        <div className="sp1-edu-card-divider" />
+
+                        {/* Details */}
+                        {safe(e?.details) && (
+                          <p className="sp1-edu-details">{safe(e.details)}</p>
+                        )}
+
+                        {/* Footer scan line */}
+                        <div className="sp1-edu-card-footer">
+                          <span className="sp1-edu-footer-tag">
+                            <span className="sp1-edu-footer-dot" />
+                            Academic Record
+                          </span>
+                          <div className="sp1-edu-scan-dots">
+                            <span /><span /><span />
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <div className="sp1-edu-corner sp1-corner-tl" />
-                  <div className="sp1-edu-corner sp1-corner-br" />
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </section>
       )}
 
-      {/* ══ PROGRAMMING LANGUAGES ══════════════════════════════════════════ */}
-      {languages.length > 0 && (
-        <section id="sp1-sec-langs" className="sp1-section">
-          <div className="sp1-section-inner">
-            <SectionTitle title="Programming Languages" icon={<MdCode size={18} />} accent="var(--sp1-electric)" />
-            <GlassCard sx={{ padding: "0" }}>
-              <div className="sp1-langs-table-wrap">
-                <table className="sp1-langs-table">
-                  <thead>
-                    <tr>
-                      <th>Language</th>
-                      <th>Level</th>
-                      <th>Experience</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {languages.map((l, i) => (
-                      <tr key={l?.id ?? i}>
-                        <td className="sp1-lang-name-cell">{safe(l?.language) || "—"}</td>
-                        <td className="sp1-lang-level-cell">{safe(l?.level) || "—"}</td>
-                        <td className="sp1-lang-yr-cell">
-                          {typeof l?.years === "number" ? `${l.years} yr` : safe(l?.years) || "—"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </GlassCard>
+{/* ══ PROGRAMMING LANGUAGES ══════════════════════════════════════════ */}
+{languages.length > 0 && (
+  <section id="sp1-sec-langs" className="sp1-section">
+    <div className="sp1-section-inner">
+      <SectionTitle title="Programming Languages" icon={<MdCode size={18} />} accent="var(--sp1-electric)" />
+      <GlassCard sx={{ padding: "0" }}>
+        <div className="sp1-langs-header-bar">
+          <div className="sp1-langs-mac-dots">
+            <span className="sp1-dot sp1-dot-red" />
+            <span className="sp1-dot sp1-dot-yellow" />
+            <span className="sp1-dot sp1-dot-green" />
           </div>
-        </section>
-      )}
+          <span className="sp1-langs-terminal-label">languages.config.ts</span>
+          <span className="sp1-langs-count-badge">{languages.length} languages</span>
+        </div>
+        <div className="sp1-langs-grid">
+          {languages.map((l, i) => {
+            const levelMap = { beginner: 25, elementary: 40, intermediate: 60, "upper-intermediate": 72, advanced: 85, expert: 95, master: 100 };
+            const levelKey = (safe(l?.level) || "").toLowerCase().replace(/\s+/g, "-");
+            const barPct = levelMap[levelKey] ?? 65;
+            const accentColors = [
+              "var(--sp1-coral)", "var(--sp1-electric)", "var(--sp1-gold)",
+              "var(--sp1-violet)", "var(--sp1-lime)", "var(--sp1-orange)",
+            ];
+            const accent = accentColors[i % accentColors.length];
+            return (
+              <div className="sp1-lang-row" key={l?.id ?? i} style={{ "--lang-accent": accent, "--bar-pct": `${barPct}%`, "--lang-i": i }}>
+                <div className="sp1-lang-left">
+                  <div className="sp1-lang-hex-wrap">
+                    <div className="sp1-lang-hex">
+                      <span className="sp1-lang-initial">{(safe(l?.language) || "?")[0].toUpperCase()}</span>
+                    </div>
+                    <div className="sp1-lang-hex-ring" />
+                  </div>
+                  <div className="sp1-lang-info">
+                    <span className="sp1-lang-name">{safe(l?.language) || "—"}</span>
+                    <span className="sp1-lang-level-tag">{safe(l?.level) || "—"}</span>
+                  </div>
+                </div>
+                <div className="sp1-lang-bar-col">
+                  <div className="sp1-lang-bar-track">
+                    <div className="sp1-lang-bar-fill" />
+                    <div className="sp1-lang-bar-glow" />
+                  </div>
+                  <span className="sp1-lang-pct">{barPct}%</span>
+                </div>
+                <div className="sp1-lang-yr-badge">
+                  <span className="sp1-lang-yr-num">
+                    {typeof l?.years === "number" ? l.years : safe(l?.years) || "—"}
+                  </span>
+                  <span className="sp1-lang-yr-unit">
+                    {typeof l?.years === "number" ? "yr" : ""}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </GlassCard>
+    </div>
+  </section>
+)}
 
       {/* ══ CONTACT ══════════════════════════════════════════════════════════ */}
       <section id="sp1-sec-contact" className="sp1-section sp1-section-alt sp1-contact-section">

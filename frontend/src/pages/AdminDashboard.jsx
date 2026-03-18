@@ -282,7 +282,7 @@ function SimpleItemDialog({ open, title, children, onClose, onSave, saveText = "
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
       <DialogTitle sx={{ fontWeight: 950 }}>{title}</DialogTitle>
-      <DialogContent sx={{ pt: 1.5 }}>{children}</DialogContent>
+      <DialogContent sx={{ pt: 4, overflow: "visible" }}>{children}</DialogContent>
       <DialogActions sx={{ p: 2 }}>
         <Button
           onClick={onClose}
@@ -382,12 +382,12 @@ function ProjectEditorDialog({ open, mode, initial, onClose, onSave }) {
   const canSave = form.title.trim().length >= 2;
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm" PaperProps={{ sx: { overflow: "visible" } }}>
       <DialogTitle sx={{ fontWeight: 950 }}>
         {mode === "edit" ? "Edit Project" : "Add Project"}
       </DialogTitle>
 
-      <DialogContent sx={{ pt: 1.5 }}>
+      <DialogContent sx={{ pt: 4, overflow: "visible" }}>
         <Grid container spacing={2}>
           <Grid item xs={12} md={6}>
             <SmallTextField
@@ -517,7 +517,7 @@ function ResumePreviewDialog({ open, title, onClose, url, blobUrl, loading }) {
   const src = blobUrl || url;
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="md" PaperProps={{ sx: { overflow: "visible" } }}>
       <DialogTitle sx={{ fontWeight: 950 }}>{title}</DialogTitle>
 
       {/* 🔥 COMPLETE SCROLLBAR REMOVAL */}
