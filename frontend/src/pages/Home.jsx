@@ -545,7 +545,7 @@ const [loading, setLoading] = useState(true);
     return () => {
       alive = false;
     };
-  }, [reloadTick, name]);
+  }, [reloadTick, username]);
 
   // ✅ keep viewer resume in sync with Admin “push to viewer”
   useEffect(() => {

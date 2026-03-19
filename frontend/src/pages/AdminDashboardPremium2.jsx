@@ -449,6 +449,68 @@ function SkillEditRow({ skill, index, isEditing, initialValue, isDark, onStartEd
   );
 }
 
+
+function PremiumBlockDialog({ open, tier, onClose, isDark }) {
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      fullWidth
+      maxWidth="xs"
+      className={isDark ? "adm-dialog" : "adm-dialog adm-dialog-light"}
+    >
+      <DialogTitle className="adm-dialog-title">
+        {tier} Not Unlocked
+      </DialogTitle>
+      <DialogContent>
+        <Typography variant="body2" sx={{ opacity: 0.85 }}>
+          You haven't unlocked <strong>{tier}</strong> yet. Please upgrade your plan to access this version of your portfolio admin.
+        </Typography>
+      </DialogContent>
+      <DialogActions sx={{ p: 2 }}>
+        <Button
+          onClick={onClose}
+          size="small"
+          className="adm-btn-primary"
+          startIcon={<MdClose />}
+        >
+          Close
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+function PortfolioLoadingDialogP2({ open, percent, text, ready, onCancel, onOpenPortfolio, isDark }) {
+  return (
+    <Dialog open={open} fullWidth maxWidth="xs" disableEscapeKeyDown
+      PaperProps={{ sx: { borderRadius: "16px", background: isDark ? "#060b14" : "#fff", border: isDark ? "1px solid rgba(241,48,36,0.22)" : "1px solid rgba(0,0,0,0.10)" } }}
+    >
+      <DialogTitle sx={{ fontWeight: 800 }}>Generating Portfolio</DialogTitle>
+      <DialogContent sx={{ pt: 1.5 }}>
+        <Stack spacing={2}>
+          <Typography sx={{ fontWeight: 900, fontSize: 28, textAlign: "center", color: "#f97316" }}>{percent}%</Typography>
+          <LinearProgress variant="determinate" value={percent}
+            sx={{ height: 8, borderRadius: 999, backgroundColor: isDark ? "rgba(241,48,36,0.12)" : "rgba(241,48,36,0.10)",
+              "& .MuiLinearProgress-bar": { borderRadius: 999, background: "linear-gradient(90deg,#f13024,#f97316)" } }}
+          />
+          <Typography variant="body2" sx={{ textAlign: "center", opacity: 0.8, minHeight: 22 }}>{text}</Typography>
+          <Stack direction="row" spacing={1} alignItems="center" justifyContent="center" flexWrap="wrap" sx={{ minHeight: 28 }}>
+            <Typography variant="body2" sx={{ fontWeight: 900, opacity: ready ? 1 : 0.45 }}>Your portfolio is ready</Typography>
+            <Button onClick={onOpenPortfolio} size="small" disabled={!ready}
+              sx={{ borderRadius: 999, fontWeight: 800, minWidth: 140, background: ready ? "linear-gradient(90deg,#f13024,#f97316)" : undefined, color: ready ? "#fff" : undefined }}>
+              Open Portfolio
+            </Button>
+          </Stack>
+        </Stack>
+      </DialogContent>
+      <DialogActions sx={{ p: 2 }}>
+        <Button onClick={onCancel} size="small" className="adm-btn-outlined" startIcon={<MdClose />}>Cancel</Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // MAIN EXPORT — AdminDashboard
 // ═══════════════════════════════════════════════════════════════════════════
@@ -472,6 +534,12 @@ export default function AdminDashboard(props) {
   const [loading, setLoading] = useState(false);
   const [ok, setOk] = useState("");
   const [err, setErr] = useState("");
+  const [navMenuAnchor, setNavMenuAnchor] = useState(null);
+  const [premiumBlockOpen, setPremiumBlockOpen] = useState(false);
+  const [premiumBlockTier, setPremiumBlockTier] = useState("");
+  const [hasPremium1, setHasPremium1] = useState(
+    () => localStorage.getItem(`premium1_${localStorage.getItem("auth_user") || ""}`) === "true"
+  );
 
   const [profile, setProfile] = useState({ name: "", title: "", tagline: "", location: "", emailPublic: "", initials: "", about: "" });
   const [skills, setSkills] = useState({ frontend: "", backend: "", database: "", tools: "" });
@@ -549,7 +617,82 @@ export default function AdminDashboard(props) {
 
   const [imgBlobUrls, setImgBlobUrls] = useState({});
 
-  const handleDrawerToggle = () => setMobileOpen((p) => !p);
+  const [portfolioGenerated, setPortfolioGenerated] = useState(
+    () => localStorage.getItem(`portfolio_generated_premium2_${(localStorage.getItem("auth_user") || "").trim().toLowerCase()}`) === "1"
+  );
+  const [portfolioLoadingOpen2, setPortfolioLoadingOpen2] = useState(false);
+  const [portfolioLoadingPercent2, setPortfolioLoadingPercent2] = useState(0);
+  const [portfolioLoadingText2, setPortfolioLoadingText2] = useState("");
+  const [portfolioReady2, setPortfolioReady2] = useState(false);
+  const [portfolioAlreadyDialogOpen2, setPortfolioAlreadyDialogOpen2] = useState(false);
+  const portfolioLoadingTimerRef2 = React.useRef(null);
+  const portfolioLoadingCancelledRef2 = React.useRef(false);
+
+const handleDrawerToggle = () => setMobileOpen((p) => !p);
+
+  const clearPortfolioLoadingTimer2 = () => {
+    if (portfolioLoadingTimerRef2.current) { clearTimeout(portfolioLoadingTimerRef2.current); portfolioLoadingTimerRef2.current = null; }
+  };
+  const resetPortfolioLoading2 = () => {
+    clearPortfolioLoadingTimer2();
+    portfolioLoadingCancelledRef2.current = false;
+    setPortfolioLoadingOpen2(false);
+    setPortfolioLoadingPercent2(0);
+    setPortfolioLoadingText2("");
+    setPortfolioReady2(false);
+  };
+  const goToPortfolioPage2 = () => {
+    if (!username) return;
+    window.open(`${window.location.origin}/${encodeURIComponent(username)}`, "_blank", "noopener,noreferrer");
+  };
+  const cancelPortfolioLoading2 = () => { portfolioLoadingCancelledRef2.current = true; resetPortfolioLoading2(); };
+  const openGeneratedPortfolio2 = () => {
+    if (!portfolioReady2 || !username) return;
+    window.open(`${window.location.origin}/${encodeURIComponent(username)}`, "_blank", "noopener,noreferrer");
+    resetPortfolioLoading2();
+  };
+  const startPortfolioLoading2 = () => {
+    if (!username || portfolioLoadingOpen2) return;
+    if (portfolioGenerated) { setPortfolioAlreadyDialogOpen2(true); return; }
+    portfolioLoadingCancelledRef2.current = false;
+    setPortfolioLoadingOpen2(true);
+    setPortfolioLoadingPercent2(0);
+    setPortfolioLoadingText2("Preparing portfolio viewer...");
+    setPortfolioReady2(false);
+    const steps = [
+      { percent: 3, text: "Initializing viewer session..." },
+      { percent: 8, text: "Connecting to portfolio service..." },
+      { percent: 14, text: "Extracting data from database..." },
+      { percent: 21, text: "Reading profile information..." },
+      { percent: 29, text: "Loading project records..." },
+      { percent: 37, text: "Loading achievements..." },
+      { percent: 45, text: "Loading education details..." },
+      { percent: 53, text: "Loading experience details..." },
+      { percent: 61, text: "Fixing colors..." },
+      { percent: 69, text: "Fixing layouts..." },
+      { percent: 77, text: "Fixing styles..." },
+      { percent: 85, text: "Mapping links..." },
+      { percent: 92, text: "Finalizing portfolio view..." },
+      { percent: 100, text: "Portfolio generated successfully." },
+    ];
+    const storageKey = `portfolio_generated_premium2_${(localStorage.getItem("auth_user") || username || "").trim().toLowerCase()}`;
+    const perStepDelay = Math.floor(30000 / steps.length);
+    let index = 0;
+    const runStep = () => {
+      if (portfolioLoadingCancelledRef2.current) return;
+      const step = steps[index];
+      if (!step) { clearPortfolioLoadingTimer2(); setPortfolioReady2(true); setPortfolioGenerated(true); localStorage.setItem(storageKey, "1"); return; }
+      setPortfolioLoadingPercent2(step.percent);
+      setPortfolioLoadingText2(step.text);
+      if (step.percent === 100) { setPortfolioGenerated(true); localStorage.setItem(storageKey, "1"); }
+      index += 1;
+      portfolioLoadingTimerRef2.current = setTimeout(runStep, perStepDelay);
+    };
+    portfolioLoadingTimerRef2.current = setTimeout(runStep, perStepDelay);
+  };
+  React.useEffect(() => { return () => { clearPortfolioLoadingTimer2(); }; }, []);
+
+
 
   // ── ALL HANDLERS ──────────────────────────────────────────────────────────
 
@@ -557,8 +700,8 @@ export default function AdminDashboard(props) {
     try {
       setErr(""); setOk(""); setLoading(true);
       const [p, s, pr, so, a, l, edu, exp] = await Promise.all([
-        getProfile(), getSkills(), getAllProjectsAdmin(), getSocials(),
-        getAchievements(), getLanguageExperience(), getEducation(), getExperience(),
+        getProfile(username), getSkills(username), getAllProjectsAdmin(username), getSocials(username),
+        getAchievements(username), getLanguageExperience(username), getEducation(username), getExperience(username),
       ]);
       setProfile(p?.data || {});
       setSkills(s?.data || {});
@@ -574,7 +717,7 @@ export default function AdminDashboard(props) {
       setLanguages(Array.isArray(l?.data) ? l.data : []);
       setEducation(Array.isArray(edu?.data) ? edu.data : []);
       setExperience(Array.isArray(exp?.data) ? exp.data : []);
-      try { const r = await listResumesAdmin(); if (r?.data && Array.isArray(r.data)) setResumes(r.data); } catch {}
+      try { const r = await listResumesAdmin(username); if (r?.data && Array.isArray(r.data)) setResumes(r.data); } catch {}
       setOk("Admin data loaded from DB.");
     } catch { setErr("Failed to load Admin data. Check backend is running + token + CORS."); }
     finally { setLoading(false); }
@@ -697,7 +840,7 @@ React.useEffect(() => {
   const handlePushResume = async (r) => { await pushResumeToViewer(r); setPushDialog({ open: true, name: r.fileName || "Resume.pdf" }); };
 
   const saveProfileNow = async () => {
-    try { setErr(""); setOk(""); setLoading(true); await updateProfile(profile); setOk("Profile saved to DB."); bumpContentVersion(); }
+    try { setErr(""); setOk(""); setLoading(true); await updateProfile(username, profile); setOk("Profile saved to DB."); bumpContentVersion(); }
     catch { setErr("Saving profile failed."); } finally { setLoading(false); }
   };
 
@@ -710,7 +853,7 @@ React.useEffect(() => {
         database: skillTable.filter(s => s.category === "database").map(s => s.name).join(","),
         tools: skillTable.filter(s => s.category === "tools").map(s => s.name).join(","),
       };
-      await updateSkills(payload);
+      await updateSkills(username, payload);
       setOk("Skills saved to database successfully"); bumpContentVersion();
     } catch (e) { console.error(e); setErr("Skills save failed"); } finally { setLoading(false); }
   };
@@ -729,7 +872,7 @@ React.useEffect(() => {
   const saveEditSkill = (i) => { setSkillTable(p => p.map((x, idx) => (idx === i ? { ...x, name: editValue } : x))); setEditIndex(null); };
 
   const saveSocialsNow = async () => {
-    try { setErr(""); setOk(""); setLoading(true); await updateSocials(socials); setOk("Contact / Links saved to DB."); bumpContentVersion(); }
+    try { setErr(""); setOk(""); setLoading(true); await updateSocials(username, socials); setOk("Contact / Links saved to DB."); bumpContentVersion(); }
     catch { setErr("Saving socials failed."); } finally { setLoading(false); }
   };
 
@@ -739,8 +882,8 @@ React.useEffect(() => {
   const onSaveProjectDialog = async (form) => {
     try {
       setErr(""); setOk(""); setLoading(true);
-      if (projDlgMode === "edit" && projDlgInitial?.id) { await updateProject(projDlgInitial.id, form); setOk("Project updated."); }
-      else { await createProject(form); setOk("Project added."); }
+      if (projDlgMode === "edit" && projDlgInitial?.id) { await updateProject(username, projDlgInitial.id, form); setOk("Project updated."); }
+      else { await createProject(username, form); setOk("Project added."); }
       setProjDlgOpen(false); await fetchAllAdmin(); bumpContentVersion();
     } catch { setErr("Project save failed."); } finally { setLoading(false); }
   };
@@ -751,7 +894,7 @@ React.useEffect(() => {
       description: `This will permanently delete "${proj.title}".`,
       confirmText: "Delete",
       onConfirm: async () => {
-        try { setConfirmOpen(false); setErr(""); setOk(""); setLoading(true); await deleteProject(proj.id); setOk("Project deleted."); await fetchAllAdmin(); bumpContentVersion(); setPendingOrders(p => { const n={...p}; delete n.projects; return n; });
+        try { setConfirmOpen(false); setErr(""); setOk(""); setLoading(true); await deleteProject(username, proj.id); setOk("Project deleted."); await fetchAllAdmin(); bumpContentVersion(); setPendingOrders(p => { const n={...p}; delete n.projects; return n; });
  }
         catch { setErr("Delete failed."); } finally { setLoading(false); }
       },
@@ -779,7 +922,7 @@ React.useEffect(() => {
     setAchDlgOpen(false);
   };
   const persistAchievements = async () => {
-    try { setErr(""); setOk(""); setLoading(true); await saveAchievements(achievements.map(({ id, ...rest }) => rest)); setOk("Achievements saved to DB.");setPendingOrders(p => { const n={...p}; delete n.achievements; return n; }); await fetchAllAdmin(); bumpContentVersion(); }
+      try { setErr(""); setOk(""); setLoading(true); await saveAchievements(username, achievements.map(({ id, ...rest }) => rest)); setOk("Achievements saved to DB.");setPendingOrders(p => { const n={...p}; delete n.achievements; return n; }); await fetchAllAdmin(); bumpContentVersion(); }
     catch { setErr("Saving achievements failed."); } finally { setLoading(false); }
   };
 
@@ -796,7 +939,7 @@ React.useEffect(() => {
     // You need a bulk-save endpoint for projects, OR use sortOrder correctly.
     // For now, sequential with sortOrder (matches your existing backend field):
     for (let idx = 0; idx < projects.length; idx++) {
-      await updateProject(projects[idx].id, { ...projects[idx], sortOrder: idx + 1 });
+      await updateProject(username, projects[idx].id, { ...projects[idx], sortOrder: idx + 1 });
     }
     setOk("Project order saved to DB.");
     setPendingOrders(prev => { const n = { ...prev }; delete n.projects; return n; });
@@ -829,7 +972,7 @@ React.useEffect(() => {
     try {
       setErr(""); setOk(""); setLoading(true);
       const payload = languages.map((l) => ({ language: l.language || l.name || "", level: l.level || "Beginner", years: String(l.years ?? 1), notes: l.notes || "" }));
-      await saveLanguageExperience(payload); setOk("Languages experience saved to DB."); setPendingOrders(p => { const n={...p}; delete n.languages; return n; }); await fetchAllAdmin(); bumpContentVersion();
+      await saveLanguageExperience(username, payload); setOk("Languages experience saved to DB."); setPendingOrders(p => { const n={...p}; delete n.languages; return n; }); await fetchAllAdmin(); bumpContentVersion();
     } catch { setErr("Saving language experience failed."); } finally { setLoading(false); }
   };
 
@@ -849,7 +992,7 @@ React.useEffect(() => {
           setErr(""); setOk(""); setLoading(true);
           let deleted = false;
           try { await http.delete(`/portfolio/education/${id}`); deleted = true; } catch {}
-          if (!deleted) { const payload = next.map(({ id: _id, ...rest }) => rest); await updateEducation(payload); }
+          if (!deleted) { const payload = next.map(({ id: _id, ...rest }) => rest); await updateEducation(username, payload); }
           setOk("Education deleted."); await fetchAllAdmin(); bumpContentVersion();
         } catch { setErr("Deleting education failed."); setEducation(prev); } finally { setLoading(false); }
       },
@@ -863,7 +1006,7 @@ React.useEffect(() => {
     setEduDlgOpen(false);
   };
   const persistEducation = async () => {
-    try { setErr(""); setOk(""); setLoading(true); const payload = education.map(({ id, ...rest }) => rest); await updateEducation(payload); setOk("Education saved to DB."); setPendingOrders(p => { const n={...p}; delete n.education; return n; }); await fetchAllAdmin(); bumpContentVersion(); }
+    try { setErr(""); setOk(""); setLoading(true); const payload = education.map(({ id, ...rest }) => rest); await updateEducation(username, payload); setOk("Education saved to DB."); setPendingOrders(p => { const n={...p}; delete n.education; return n; }); await fetchAllAdmin(); bumpContentVersion(); }
     catch { setErr("Saving education failed."); } finally { setLoading(false); }
   };
 
@@ -883,7 +1026,7 @@ React.useEffect(() => {
           setErr(""); setOk(""); setLoading(true);
           let deleted = false;
           try { await http.delete(`/portfolio/experience/${id}`); deleted = true; } catch {}
-          if (!deleted) { const payload = next.map(({ id: _id, ...rest }) => rest); await updateExperience(payload); }
+          if (!deleted) { const payload = next.map(({ id: _id, ...rest }) => rest); await updateExperience(username, payload); }
           setOk("Experience deleted."); await fetchAllAdmin(); bumpContentVersion();
         } catch { setErr("Deleting experience failed."); setExperience(prev); } finally { setLoading(false); }
       },
@@ -897,7 +1040,7 @@ React.useEffect(() => {
     setExpDlgOpen(false);
   };
   const persistExperience = async () => {
-    try { setErr(""); setOk(""); setLoading(true); const payload = experience.map(({ id, ...rest }) => rest); await updateExperience(payload); setOk("Experience saved to DB."); setPendingOrders(p => { const n={...p}; delete n.experience; return n; }); await fetchAllAdmin(); bumpContentVersion(); }
+    try { setErr(""); setOk(""); setLoading(true); const payload = experience.map(({ id, ...rest }) => rest); await updateExperience(username, payload); setOk("Experience saved to DB."); setPendingOrders(p => { const n={...p}; delete n.experience; return n; }); await fetchAllAdmin(); bumpContentVersion(); }
     catch { setErr("Saving experience failed."); } finally { setLoading(false); }
   };
 
@@ -906,8 +1049,8 @@ React.useEffect(() => {
       setErr(""); setOk("");
       setResumeUploading(true);
       setResumeUploadedName(file.name);
-      await uploadResume(file);
-      const r = await listResumesAdmin();
+      await uploadResume(username, file);
+      const r = await listResumesAdmin(username);
       if (r?.data && Array.isArray(r.data)) setResumes(r.data);
       bumpContentVersion();
       setResumeUploadSuccess(true);
@@ -931,9 +1074,9 @@ React.useEffect(() => {
     setResumePreviewBlobUrl("");
   };
 
-  const previewCurrentResumeInline = async () => openResumePreviewInline("Current Resume", viewResumeUrl());
+  const previewCurrentResumeInline = async () => openResumePreviewInline("Current Resume", viewResumeUrl(username));
   const pushResumeToViewer = async (item) => {
-    try { if (!item?.id) return; setErr(""); setOk(""); setLoading(true); await setPrimaryResume(item.id); setOk(`Pushed to Viewer: ${item.fileName || "Resume"}`); await fetchAllAdmin(); bumpContentVersion(); }
+    try { if (!item?.id) return; setErr(""); setOk(""); setLoading(true); await setPrimaryResume(username, item.id); setOk(`Pushed to Viewer: ${item.fileName || "Resume"}`); await fetchAllAdmin(); bumpContentVersion(); }
     catch { setErr("Failed to push resume to Viewer."); } finally { setLoading(false); }
   };
 
@@ -959,14 +1102,14 @@ React.useEffect(() => {
     const item = resumeMenuItem;
     closeResumeMenu();
     if (!item?.id) return;
-    await openResumePreviewInline(item.fileName || "Resume", viewResumeByIdUrl(item.id));
+    await openResumePreviewInline(item.fileName || "Resume", viewResumeByIdUrl(username, item.id));
   };
 
   const makePrimaryResume = async () => {
     const item = resumeMenuItem;
     closeResumeMenu();
     if (!item?.id) return;
-    try { setErr(""); setOk(""); setLoading(true); await setPrimaryResume(item.id); setOk("Primary resume set."); await fetchAllAdmin(); bumpContentVersion(); }
+    try { setErr(""); setOk(""); setLoading(true); await setPrimaryResume(username, item.id); setOk("Primary resume set."); await fetchAllAdmin(); bumpContentVersion(); }
     catch { setErr("Failed to set primary."); } finally { setLoading(false); }
   };
 
@@ -980,7 +1123,7 @@ React.useEffect(() => {
       confirmText: "Delete",
       onConfirm: async () => {
         setConfirmOpen(false);
-        try { setErr(""); setOk(""); setLoading(true); await deleteResumeById(item.id); setOk("Resume deleted."); await fetchAllAdmin(); bumpContentVersion(); }
+        try { setErr(""); setOk(""); setLoading(true); await deleteResumeById(username, item.id); setOk("Resume deleted."); await fetchAllAdmin(); bumpContentVersion(); }
         catch { setErr("Failed to delete resume."); } finally { setLoading(false); }
       },
     });
@@ -1275,11 +1418,102 @@ const TC = ({ children, bold, sx, colSpan }) => (
   {displayName} · {pageLabel[active] || "Admin"} · Premium 2
 </Typography>
 
-          <Tooltip title="View Portfolio">
-            <IconButton onClick={() => window.open("/", "_blank")} className={`adm-bar-btn ${isDark ? "" : "adm-bar-btn-light"}`}>
-              <MdVisibility />
+          <Button
+            size="small"
+            className="adm-btn-primary"
+            disabled={portfolioLoadingOpen2}
+            onClick={startPortfolioLoading2}
+            sx={{ borderRadius: 999, fontWeight: 800, textTransform: "none", mr: 0.5 }}
+          >
+            Generate Portfolio
+          </Button>
+
+          {portfolioGenerated && (
+            <Tooltip title="View Portfolio">
+              <IconButton
+                onClick={goToPortfolioPage2}
+                disabled={portfolioLoadingOpen2}
+                className={`adm-bar-btn ${isDark ? "" : "adm-bar-btn-light"}`}
+              >
+                <MdVisibility />
+              </IconButton>
+            </Tooltip>
+          )}
+
+          {/* ── Admin version navigator ── */}
+          <Tooltip title="Switch Admin Version">
+            <IconButton
+              onClick={(e) => setNavMenuAnchor(e.currentTarget)}
+              className={`adm-bar-btn ${isDark ? "" : "adm-bar-btn-light"}`}
+            >
+              <MdArrowUpward style={{ transform: "rotate(45deg)" }} />
             </IconButton>
           </Tooltip>
+
+          <Menu
+            anchorEl={navMenuAnchor}
+            open={Boolean(navMenuAnchor)}
+            onClose={() => setNavMenuAnchor(null)}
+            PaperProps={{
+              className: isDark ? "adm-dialog" : "adm-dialog adm-dialog-light",
+              sx: { minWidth: 220, mt: 1 },
+            }}
+          >
+            <MenuItem
+              onClick={() => {
+                setNavMenuAnchor(null);
+                const authUser = localStorage.getItem("auth_user") || username || "";
+                window.location.href = `/${authUser}/adminpanel`;
+              }}
+            >
+              <ListItemIcon sx={{ minWidth: 34 }}>
+                <MdDashboard />
+              </ListItemIcon>
+              Free Admin
+            </MenuItem>
+
+            <MenuItem
+              onClick={() => {
+                setNavMenuAnchor(null);
+                if (!hasPremium1) {
+                  setPremiumBlockTier("Premium 1");
+                  setPremiumBlockOpen(true);
+                } else {
+                  window.location.href = `/${username}/adminpanel/premium1`;
+                }
+              }}
+            >
+              <ListItemIcon sx={{ minWidth: 34 }}>
+                <MdStar />
+              </ListItemIcon>
+              Premium 1 Admin
+              {!hasPremium1 && (
+                <Chip
+                  size="small"
+                  label="Locked"
+                  sx={{ ml: "auto", borderRadius: 2, fontSize: 11 }}
+                />
+              )}
+            </MenuItem>
+
+            <MenuItem
+              onClick={() => setNavMenuAnchor(null)}
+              selected
+              sx={{ fontWeight: 800, color: "#f97316" }}
+            >
+              <ListItemIcon sx={{ minWidth: 34, color: "#f97316" }}>
+                <MdStar />
+              </ListItemIcon>
+              Premium 2 Admin (Current)
+            </MenuItem>
+          </Menu>
+
+          <PremiumBlockDialog
+            open={premiumBlockOpen}
+            tier={premiumBlockTier}
+            onClose={() => setPremiumBlockOpen(false)}
+            isDark={isDark}
+          />
 
           <Tooltip title={isDark ? "Light Mode" : "Dark Mode"}>
             <IconButton onClick={toggleTheme} className={`adm-bar-btn ${isDark ? "" : "adm-bar-btn-light"}`}>
@@ -1567,7 +1801,7 @@ onClick={async () => {
     setErr(""); setOk(""); setLoading(true);
     // Sequential updates preserve order even if backend uses insert-order
     for (let idx = 0; idx < projects.length; idx++) {
-      await updateProject(projects[idx].id, { ...projects[idx], sortOrder: idx + 1 });
+      await updateProject(username, projects[idx].id, { ...projects[idx], sortOrder: idx + 1 });
     }
     setOk("Project order saved to DB.");
     setPendingOrders(prev => { const n = { ...prev }; delete n.projects; return n; });
@@ -2147,7 +2381,7 @@ right={
                 <MenuItem onClick={deleteResume} sx={{ color: "error.main" }}><ListItemIcon sx={{ minWidth: 34, color: "error.main" }}><MdDelete /></ListItemIcon>Delete</MenuItem>
               </Menu>
 
-              <ResumePreviewDialog open={resumePreviewOpen} title={resumePreviewTitle} onClose={closeResumePreview} url={viewResumeUrl()} blobUrl={resumePreviewBlobUrl} loading={resumePreviewLoading} />
+              <ResumePreviewDialog open={resumePreviewOpen} title={resumePreviewTitle} onClose={closeResumePreview} url={viewResumeUrl(username)} blobUrl={resumePreviewBlobUrl} loading={resumePreviewLoading} />
 
               <ResumeUploadSuccessDialog
                 open={resumeUploadSuccess}
@@ -2396,6 +2630,37 @@ right={
             onClose={() => setConfirmOpen(false)}
             onConfirm={confirmPayload.onConfirm || (() => setConfirmOpen(false))}
           />
+
+          <PortfolioLoadingDialogP2
+            open={portfolioLoadingOpen2}
+            percent={portfolioLoadingPercent2}
+            text={portfolioLoadingText2}
+            ready={portfolioReady2}
+            onCancel={cancelPortfolioLoading2}
+            onOpenPortfolio={openGeneratedPortfolio2}
+            isDark={isDark}
+          />
+
+          <Dialog
+            open={portfolioAlreadyDialogOpen2}
+            onClose={() => setPortfolioAlreadyDialogOpen2(false)}
+            fullWidth maxWidth="xs"
+            className={isDark ? "adm-dialog" : "adm-dialog adm-dialog-light"}
+          >
+            <DialogTitle className="adm-dialog-title">Portfolio Already Generated</DialogTitle>
+            <DialogContent>
+              <Typography variant="body2" sx={{ opacity: 0.85 }}>
+                Your <strong>Premium 2</strong> portfolio is already generated. You cannot generate it again.
+                Use the eye icon in the top bar to view your portfolio.
+              </Typography>
+            </DialogContent>
+            <DialogActions sx={{ p: 2, gap: 1 }}>
+              <Button onClick={goToPortfolioPage2} size="small" className="adm-btn-outlined" startIcon={<MdVisibility />}>
+                View Portfolio
+              </Button>
+              <Button onClick={() => setPortfolioAlreadyDialogOpen2(false)} size="small" className="adm-btn-primary">OK</Button>
+            </DialogActions>
+          </Dialog>
 
         {/* Reorder Menu */}
         <Menu

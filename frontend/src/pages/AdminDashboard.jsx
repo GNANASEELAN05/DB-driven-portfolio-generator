@@ -712,12 +712,45 @@ function PortfolioLoadingDialog({
 }
 
 
+function PremiumBlockDialog({ open, tier, onClose }) {
+  return (
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
+      <DialogTitle sx={{ fontWeight: 950 }}>
+        {tier} Not Unlocked
+      </DialogTitle>
+      <DialogContent>
+        <Typography variant="body2" sx={{ opacity: 0.85 }}>
+          You haven't unlocked <strong>{tier}</strong> yet. Please upgrade your plan to access this version of your portfolio admin.
+        </Typography>
+      </DialogContent>
+      <DialogActions sx={{ p: 2 }}>
+        <Button
+          onClick={onClose}
+          variant="contained"
+          size="small"
+          startIcon={<MdClose />}
+          sx={{
+            borderRadius: 999,
+            fontWeight: 950,
+            background: `linear-gradient(135deg, ${BRAND_PRIMARY}, ${BRAND_DARK})`,
+          }}
+        >
+          Close
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
 
 export default function AdminDashboard(props) {
   const navigate = useNavigate();  // ← already exists, leave it
-const [versionPickerOpen, setVersionPickerOpen] = useState(false);   // ← ADD
-const [hasPremium1, setHasPremium1]             = useState(false);   // ← ADD
-const [hasPremium2, setHasPremium2]             = useState(false); 
+  const [versionPickerOpen, setVersionPickerOpen] = useState(false);
+  const [hasPremium1, setHasPremium1]             = useState(false);
+  const [hasPremium2, setHasPremium2]             = useState(false);
+  const [navMenuAnchor, setNavMenuAnchor]         = useState(null);
+  const [premiumBlockOpen, setPremiumBlockOpen]   = useState(false);
+  const [premiumBlockTier, setPremiumBlockTier]   = useState("");
   const { username } = useParams();
   // ⭐ get original username (with caps & spaces)
 const displayName =
@@ -1052,6 +1085,7 @@ setSkillTable(table);
   };
 
 React.useEffect(() => {
+  fetchAllAdmin();
   fetchPremiumStatus().then((s) => {
     setHasPremium1(s.hasPremium1);
     setHasPremium2(s.hasPremium2);
@@ -1732,7 +1766,7 @@ const saveEditSkill = (i) => {
           </Typography>
 
           {/* ✅ NEW: Eye icon to open Viewer page */}
-          <Button
+<Button
             onClick={() => setVersionPickerOpen(true)}
               variant="contained"
               size="small"
@@ -1746,6 +1780,94 @@ const saveEditSkill = (i) => {
           >
               Generate Portfolio
             </Button>
+
+          {/* ── Admin version navigator ── */}
+          <Tooltip title="Switch Admin Version">
+            <IconButton
+              onClick={(e) => setNavMenuAnchor(e.currentTarget)}
+              color="inherit"
+              disabled={portfolioLoadingOpen}
+              sx={{
+                border: "1px solid rgba(122,63,145,0.35)",
+                borderRadius: 999,
+              }}
+            >
+              <MdArrowUpward style={{ transform: "rotate(45deg)" }} />
+            </IconButton>
+          </Tooltip>
+
+          <Menu
+            anchorEl={navMenuAnchor}
+            open={Boolean(navMenuAnchor)}
+            onClose={() => setNavMenuAnchor(null)}
+            PaperProps={{
+              sx: {
+                borderRadius: 2.5,
+                border: "1px solid rgba(198,128,242,0.22)",
+                minWidth: 220,
+                mt: 1,
+              }
+            }}
+          >
+            <MenuItem
+              onClick={() => {
+                setNavMenuAnchor(null);
+              }}
+              selected
+              sx={{ fontWeight: 900, color: BRAND_PRIMARY }}
+            >
+              <ListItemIcon sx={{ minWidth: 34, color: BRAND_PRIMARY }}>
+                <MdDashboard />
+              </ListItemIcon>
+              Free Admin (Current)
+            </MenuItem>
+
+            <MenuItem
+              onClick={() => {
+                setNavMenuAnchor(null);
+                if (!hasPremium1) {
+                  setPremiumBlockTier("Premium 1");
+                  setPremiumBlockOpen(true);
+                } else {
+                  navigate(`/${username}/adminpanel/premium1`);
+                }
+              }}
+            >
+              <ListItemIcon sx={{ minWidth: 34 }}>
+                <MdStar />
+              </ListItemIcon>
+              Premium 1 Admin
+              {!hasPremium1 && (
+                <Chip size="small" label="Locked" sx={{ ml: "auto", borderRadius: 2, fontSize: 11 }} />
+              )}
+            </MenuItem>
+
+            <MenuItem
+              onClick={() => {
+                setNavMenuAnchor(null);
+                if (!hasPremium2) {
+                  setPremiumBlockTier("Premium 2");
+                  setPremiumBlockOpen(true);
+                } else {
+                  navigate(`/${username}/adminpanel/premium2`);
+                }
+              }}
+            >
+              <ListItemIcon sx={{ minWidth: 34 }}>
+                <MdStar />
+              </ListItemIcon>
+              Premium 2 Admin
+              {!hasPremium2 && (
+                <Chip size="small" label="Locked" sx={{ ml: "auto", borderRadius: 2, fontSize: 11 }} />
+              )}
+            </MenuItem>
+          </Menu>
+
+          <PremiumBlockDialog
+            open={premiumBlockOpen}
+            tier={premiumBlockTier}
+            onClose={() => setPremiumBlockOpen(false)}
+          />
 
           {portfolioGenerated ? (
             <Tooltip title="View Portfolio">

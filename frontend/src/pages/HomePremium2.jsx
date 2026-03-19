@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import http from "../api/http";
+import "./HomePremium2.css";
 import SkillsBucketSection from "../components/SkillsBucket";
 import {
   Box,
@@ -1415,8 +1416,8 @@ useEffect(() => {
 
   const reload = () => setReloadTick((x) => x + 1);
   const contentVersion = useMemo(() => localStorage.getItem("content_version") || "0", [reloadTick]);
-  const resumeDownloadBase = useMemo(() => downloadResumeUrl(), []);
-  const resumeViewBase     = useMemo(() => viewResumeUrl(), []);
+  const resumeDownloadBase = useMemo(() => downloadResumeUrl(username), [username]);
+  const resumeViewBase     = useMemo(() => viewResumeUrl(username), [username]);
 
   const resumeDownloadUrlBusted = useMemo(() => {
     const joiner = resumeDownloadBase.includes("?") ? "&" : "?";
@@ -1463,8 +1464,14 @@ useEffect(() => {
         setLoading(true);
         const [profRes, skillsRes, projRes, expRes, eduRes, socRes, achRes, langRes] =
           await Promise.all([
-            getProfile(), getSkills(), getFeaturedProjects(), getExperience(),
-            getEducation(), getSocials(), getAchievements(), getLanguageExperience(),
+            getProfile(username),
+            getSkills(username),
+            getFeaturedProjects(username),
+            getExperience(username),
+            getEducation(username),
+            getSocials(username),
+            getAchievements(username),
+            getLanguageExperience(username),
           ]);
         if (!alive) return;
         const nextProfile = profRes?.data || {};
@@ -1624,13 +1631,13 @@ const BACKEND_BASE = (
 const resolvedAnimatedSrc = useMemo(() => {
   const hasPrimary = profileImages.some((i) => i.imageType === "animated" && i.primary === true);
   if (hasPrimary) return `${BACKEND_BASE}/api/profile-image/animated?t=${imageBust}`;
-  return AnimatedPhoto;
+  return null;
 }, [profileImages, imageBust]);
 
 const resolvedOriginalSrc = useMemo(() => {
   const hasPrimary = profileImages.some((i) => i.imageType === "original" && i.primary === true);
   if (hasPrimary) return `${BACKEND_BASE}/api/profile-image/original?t=${imageBust}`;
-  return OriginalPhoto;
+  return null;
 }, [profileImages, imageBust]);
   // ─────────────────────────────────────────────────────────────────────────
 
@@ -1721,8 +1728,8 @@ case "home":
             </Box>
 
             {/* ── MAIN HERO LAYOUT ── */}
-            <Box className="hero-layout hero-layout-two-col" sx={{ position:"relative",zIndex:2 }}>
-              <Box className="hero-left hero-left-expanded">
+            <Box className="hero-layout hero-layout-two-col" sx={{ position: "relative", zIndex: 2 }}>
+  <Box className="hero-left hero-left-expanded">
                 <MotionBox variants={fadeUp}>
 
                   {/* Identity index stamp */}
@@ -2804,7 +2811,7 @@ case "contact":
     </IconButton>
   </Tooltip>
   <Tooltip title="Admin" placement="left" arrow>
-    <IconButton onClick={() => navigate("/admin")} className="topbar-icon-btn accent">
+    <IconButton onClick={() => navigate(`/${username}/adminpanel/premium2`)} className="topbar-icon-btn accent">
       <MdAdminPanelSettings />
     </IconButton>
   </Tooltip>

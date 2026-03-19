@@ -76,6 +76,7 @@ import {
   MdBadge,
   MdCheckCircle,
   MdWorkspacePremium,
+  MdArrowOutward,
 } from "react-icons/md";
 
 import {
@@ -443,6 +444,69 @@ function SkillEditRow({ skill, index, isEditing, initialValue, isDark, onStartEd
   );
 }
 
+
+function PremiumBlockDialog({ open, tier, onClose, isDark }) {
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      fullWidth
+      maxWidth="xs"
+      className={isDark ? "p1-dialog" : "p1-dialog p1-dialog-light"}
+    >
+      <DialogTitle className="p1-dialog-title">
+        {tier} Not Unlocked
+      </DialogTitle>
+      <DialogContent>
+        <Typography variant="body2" sx={{ opacity: 0.85 }}>
+          You haven't unlocked <strong>{tier}</strong> yet. Please upgrade your plan to access this version of your portfolio admin.
+        </Typography>
+      </DialogContent>
+      <DialogActions sx={{ p: 2 }}>
+        <Button
+          onClick={onClose}
+          size="small"
+          className="p1-btn-primary"
+          startIcon={<MdClose />}
+        >
+          Close
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+function PortfolioLoadingDialogP1({ open, percent, text, ready, onCancel, onOpenPortfolio, isDark }) {
+  return (
+    <Dialog open={open} fullWidth maxWidth="xs" disableEscapeKeyDown
+      PaperProps={{ sx: { borderRadius: "16px", background: isDark ? "#0e1a21" : "#fff", border: isDark ? "1px solid rgba(45,212,191,0.22)" : "1px solid rgba(0,0,0,0.10)" } }}
+    >
+      <DialogTitle sx={{ fontWeight: 800 }}>Generating Portfolio</DialogTitle>
+      <DialogContent sx={{ pt: 1.5 }}>
+        <Stack spacing={2}>
+          <Typography sx={{ fontWeight: 900, fontSize: 28, textAlign: "center", color: "#2dd4bf" }}>{percent}%</Typography>
+          <LinearProgress variant="determinate" value={percent}
+            sx={{ height: 8, borderRadius: 999, backgroundColor: isDark ? "rgba(45,212,191,0.12)" : "rgba(45,212,191,0.15)",
+              "& .MuiLinearProgress-bar": { borderRadius: 999, background: "linear-gradient(90deg,#2dd4bf,#0d9488)" } }}
+          />
+          <Typography variant="body2" sx={{ textAlign: "center", opacity: 0.8, minHeight: 22 }}>{text}</Typography>
+          <Stack direction="row" spacing={1} alignItems="center" justifyContent="center" flexWrap="wrap" sx={{ minHeight: 28 }}>
+            <Typography variant="body2" sx={{ fontWeight: 900, opacity: ready ? 1 : 0.45 }}>Your portfolio is ready</Typography>
+            <Button onClick={onOpenPortfolio} size="small" disabled={!ready}
+              sx={{ borderRadius: 999, fontWeight: 800, minWidth: 140, background: ready ? "linear-gradient(90deg,#2dd4bf,#0d9488)" : undefined, color: ready ? "#fff" : undefined }}>
+              Open Portfolio
+            </Button>
+          </Stack>
+        </Stack>
+      </DialogContent>
+      <DialogActions sx={{ p: 2 }}>
+        <Button onClick={onCancel} size="small" className="p1-btn-outlined" startIcon={<MdClose />}>Cancel</Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+
 // ═══════════════════════════════════════════════════════════════════════════
 // MAIN EXPORT — AdminDashboardPremium1
 // ═══════════════════════════════════════════════════════════════════════════
@@ -463,6 +527,15 @@ export default function AdminDashboardPremium1(props) {
   const [loading, setLoading] = useState(false);
   const [ok, setOk] = useState("");
   const [err, setErr] = useState("");
+  const [navMenuAnchor, setNavMenuAnchor] = useState(null);
+  const [premiumBlockOpen, setPremiumBlockOpen] = useState(false);
+  const [premiumBlockTier, setPremiumBlockTier] = useState("");
+  const [hasPremium1, setHasPremium1] = useState(
+    () => localStorage.getItem(`premium1_${localStorage.getItem("auth_user") || ""}`) === "true"
+  );
+  const [hasPremium2, setHasPremium2] = useState(
+    () => localStorage.getItem(`premium2_${localStorage.getItem("auth_user") || ""}`) === "true"
+  );
 
   const [profile, setProfile] = useState({ name: "", title: "", tagline: "", location: "", emailPublic: "", initials: "", about: "" });
   const [skills, setSkills] = useState({ frontend: "", backend: "", database: "", tools: "" });
@@ -524,6 +597,19 @@ export default function AdminDashboardPremium1(props) {
   const [certPreviewIsImage, setCertPreviewIsImage] = useState(false);
   const [certPreviewLoading, setCertPreviewLoading] = useState(false);
   const [certPreviewAchId, setCertPreviewAchId] = useState(null);
+
+
+
+const [portfolioGenerated, setPortfolioGenerated] = useState(
+  () => localStorage.getItem(`portfolio_generated_premium1_${(localStorage.getItem("auth_user") || "").trim().toLowerCase()}`) === "1"
+);
+const [portfolioLoadingOpen, setPortfolioLoadingOpen] = useState(false);
+const [portfolioLoadingPercent, setPortfolioLoadingPercent] = useState(0);
+const [portfolioLoadingText, setPortfolioLoadingText] = useState("");
+const [portfolioReady, setPortfolioReady] = useState(false);
+const [portfolioAlreadyDialogOpen, setPortfolioAlreadyDialogOpen] = useState(false);
+const portfolioLoadingTimerRef = React.useRef(null);
+const portfolioLoadingCancelledRef = React.useRef(false);
 
   const handleDrawerToggle = () => setMobileOpen((p) => !p);
 
@@ -973,6 +1059,83 @@ try { setErr(""); setOk(""); setLoading(true); const payload = education.map(({ 
     </TableCell>
   );
 
+
+
+const clearPortfolioLoadingTimer = () => {
+  if (portfolioLoadingTimerRef.current) {
+    clearTimeout(portfolioLoadingTimerRef.current);
+    portfolioLoadingTimerRef.current = null;
+  }
+};
+
+const resetPortfolioLoading = () => {
+  clearPortfolioLoadingTimer();
+  portfolioLoadingCancelledRef.current = false;
+  setPortfolioLoadingOpen(false);
+  setPortfolioLoadingPercent(0);
+  setPortfolioLoadingText("");
+  setPortfolioReady(false);
+};
+
+const goToPortfolioPage = () => {
+  if (!username) return;
+  window.open(`${window.location.origin}/${encodeURIComponent(username)}`, "_blank", "noopener,noreferrer");
+};
+
+const cancelPortfolioLoading = () => {
+  portfolioLoadingCancelledRef.current = true;
+  resetPortfolioLoading();
+};
+
+const openGeneratedPortfolio = () => {
+  if (!portfolioReady || !username) return;
+  window.open(`${window.location.origin}/${encodeURIComponent(username)}`, "_blank", "noopener,noreferrer");
+  resetPortfolioLoading();
+};
+
+const startPortfolioLoading = () => {
+  if (!username || portfolioLoadingOpen) return;
+  if (portfolioGenerated) { setPortfolioAlreadyDialogOpen(true); return; }
+  portfolioLoadingCancelledRef.current = false;
+  setPortfolioLoadingOpen(true);
+  setPortfolioLoadingPercent(0);
+  setPortfolioLoadingText("Preparing portfolio viewer...");
+  setPortfolioReady(false);
+  const steps = [
+    { percent: 3, text: "Initializing viewer session..." },
+    { percent: 8, text: "Connecting to portfolio service..." },
+    { percent: 14, text: "Extracting data from database..." },
+    { percent: 21, text: "Reading profile information..." },
+    { percent: 29, text: "Loading project records..." },
+    { percent: 37, text: "Loading achievements..." },
+    { percent: 45, text: "Loading education details..." },
+    { percent: 53, text: "Loading experience details..." },
+    { percent: 61, text: "Fixing colors..." },
+    { percent: 69, text: "Fixing layouts..." },
+    { percent: 77, text: "Fixing styles..." },
+    { percent: 85, text: "Mapping links..." },
+    { percent: 92, text: "Finalizing portfolio view..." },
+    { percent: 100, text: "Portfolio generated successfully." },
+  ];
+  const storageKey = `portfolio_generated_premium1_${(localStorage.getItem("auth_user") || username || "").trim().toLowerCase()}`;
+  const perStepDelay = Math.floor(30000 / steps.length);
+  let index = 0;
+  const runStep = () => {
+    if (portfolioLoadingCancelledRef.current) return;
+    const step = steps[index];
+    if (!step) { clearPortfolioLoadingTimer(); setPortfolioReady(true); setPortfolioGenerated(true); localStorage.setItem(storageKey, "1"); return; }
+    setPortfolioLoadingPercent(step.percent);
+    setPortfolioLoadingText(step.text);
+    if (step.percent === 100) { setPortfolioGenerated(true); localStorage.setItem(storageKey, "1"); }
+    index += 1;
+    portfolioLoadingTimerRef.current = setTimeout(runStep, perStepDelay);
+  };
+  portfolioLoadingTimerRef.current = setTimeout(runStep, perStepDelay);
+};
+
+React.useEffect(() => { return () => { clearPortfolioLoadingTimer(); }; }, []);
+
+
   // ── Drawer content ────────────────────────────────────────────────────────
   const drawer = (
     <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
@@ -1058,13 +1221,108 @@ try { setErr(""); setOk(""); setLoading(true); const payload = education.map(({ 
             {pageLabel[active] || "Admin"}
           </Typography>
 
-          <Chip label="PREMIUM" size="small" className="p1-premium-chip" sx={{ mr: 0.5 }} />
+                    <Chip label="PREMIUM 1" size="small" className="p1-premium-chip" sx={{ mr: 0.5 }} />
 
-          <Tooltip title="View Portfolio">
-            <IconButton onClick={() => window.open("/", "_blank")} className={`p1-bar-btn ${isDark ? "" : "p1-bar-btn-light"}`}>
-              <MdVisibility />
+          <Button
+            size="small"
+            className="p1-btn-primary"
+            disabled={portfolioLoadingOpen}
+            onClick={startPortfolioLoading}
+            sx={{ borderRadius: 999, fontWeight: 800, textTransform: "none", mr: 0.5 }}
+          >
+            Generate Portfolio
+          </Button>
+
+          {portfolioGenerated && (
+            <Tooltip title="View Portfolio">
+              <IconButton
+                onClick={goToPortfolioPage}
+                disabled={portfolioLoadingOpen}
+                className={`p1-bar-btn ${isDark ? "" : "p1-bar-btn-light"}`}
+              >
+                <MdVisibility />
+              </IconButton>
+            </Tooltip>
+          )}
+
+          {/* ── Admin version navigator ── */}
+          <Tooltip title="Switch Admin Version">
+            <IconButton
+              onClick={(e) => setNavMenuAnchor(e.currentTarget)}
+              className={`p1-bar-btn ${isDark ? "" : "p1-bar-btn-light"}`}
+            >
+              <MdArrowOutward size={17} />
             </IconButton>
           </Tooltip>
+
+          <Menu
+            anchorEl={navMenuAnchor}
+            open={Boolean(navMenuAnchor)}
+            onClose={() => setNavMenuAnchor(null)}
+            PaperProps={{
+              sx: {
+                borderRadius: "14px",
+                border: isDark
+                  ? "1px solid rgba(45,212,191,0.20)"
+                  : "1px solid rgba(0,0,0,0.10)",
+                minWidth: 220,
+                mt: 1,
+                background: isDark ? "#0e1a21" : "#fff",
+              }
+            }}
+          >
+            <MenuItem
+              onClick={() => {
+                setNavMenuAnchor(null);
+                const authUser = localStorage.getItem("auth_user") || username || "";
+                window.location.href = `/${authUser}/adminpanel`;
+              }}
+            >
+              <ListItemIcon sx={{ minWidth: 34 }}>
+                <MdDashboard />
+              </ListItemIcon>
+              Free Admin
+            </MenuItem>
+
+            <MenuItem
+              onClick={() => setNavMenuAnchor(null)}
+              selected
+              sx={{ fontWeight: 800, color: "#2dd4bf" }}
+            >
+              <ListItemIcon sx={{ minWidth: 34, color: "#2dd4bf" }}>
+                <MdStar />
+              </ListItemIcon>
+              Premium 1 Admin (Current)
+            </MenuItem>
+
+            <MenuItem
+              onClick={() => {
+                setNavMenuAnchor(null);
+                if (!hasPremium2) {
+                  setPremiumBlockTier("Premium 2");
+                  setPremiumBlockOpen(true);
+                } else {
+                  window.location.href = `/${username}/adminpanel/premium2`;
+                }
+              }}
+            >
+              <ListItemIcon sx={{ minWidth: 34 }}>
+                <MdStar />
+              </ListItemIcon>
+              Premium 2 Admin
+              {!hasPremium2 && (
+                <Chip size="small" label="Locked" sx={{ ml: "auto", borderRadius: 2, fontSize: 11 }} />
+              )}
+            </MenuItem>
+          </Menu>
+
+          <PremiumBlockDialog
+            open={premiumBlockOpen}
+            tier={premiumBlockTier}
+            onClose={() => setPremiumBlockOpen(false)}
+            isDark={isDark}
+          />
+
 
           <Tooltip title={isDark ? "Light Mode" : "Dark Mode"}>
             <IconButton onClick={toggleTheme} className={`p1-bar-btn ${isDark ? "" : "p1-bar-btn-light"}`}>
@@ -1837,6 +2095,36 @@ try { setErr(""); setOk(""); setLoading(true); const payload = education.map(({ 
               </Dialog>
             </Box>
           )}
+                    <PortfolioLoadingDialogP1
+            open={portfolioLoadingOpen}
+            percent={portfolioLoadingPercent}
+            text={portfolioLoadingText}
+            ready={portfolioReady}
+            onCancel={cancelPortfolioLoading}
+            onOpenPortfolio={openGeneratedPortfolio}
+            isDark={isDark}
+          />
+
+          <Dialog
+            open={portfolioAlreadyDialogOpen}
+            onClose={() => setPortfolioAlreadyDialogOpen(false)}
+            fullWidth maxWidth="xs"
+            className={isDark ? "p1-dialog" : "p1-dialog p1-dialog-light"}
+          >
+            <DialogTitle className="p1-dialog-title">Portfolio Already Generated</DialogTitle>
+            <DialogContent>
+              <Typography variant="body2" sx={{ opacity: 0.85 }}>
+                Your <strong>Premium 1</strong> portfolio is already generated. You cannot generate it again.
+                Use the eye icon in the top bar to view your portfolio.
+              </Typography>
+            </DialogContent>
+            <DialogActions sx={{ p: 2, gap: 1 }}>
+              <Button onClick={goToPortfolioPage} size="small" className="p1-btn-outlined" startIcon={<MdVisibility />}>
+                View Portfolio
+              </Button>
+              <Button onClick={() => setPortfolioAlreadyDialogOpen(false)} size="small" className="p1-btn-primary">OK</Button>
+            </DialogActions>
+          </Dialog>
 
           {/* ── CONFIRM DIALOG ── */}
           <ConfirmDialog
