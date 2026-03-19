@@ -4,6 +4,7 @@ import com.portfolio.backend.model.MasterAdmin;
 import com.portfolio.backend.repository.MasterAdminRepository;
 import com.portfolio.backend.security.JwtService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -24,17 +25,28 @@ public class MasterAdminService implements ApplicationRunner {
 
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-    // ── Seed a default controller account on first startup ────────────────
-    // Change these credentials immediately after first login!
+    // ── Read credentials from environment variables (never hardcoded) ─────
+    @Value("${controller.username}")
+    private String controllerUsername;
+
+    // This must already be a BCrypt hash — generate using GenerateHash.java
+    @Value("${controller.password.hash}")
+    private String controllerPasswordHash;
+
+    @Value("${controller.display.name}")
+    private String controllerDisplayName;
+
+    // ── Seed controller account on first startup using env vars ───────────
     @Override
     public void run(ApplicationArguments args) {
-        if (!masterAdminRepository.existsByUsername("controller")) {
+        String uLower = controllerUsername.trim().toLowerCase();
+        if (!masterAdminRepository.existsByUsername(uLower)) {
             MasterAdmin master = new MasterAdmin();
-            master.setUsername("controller");
-            master.setPassword(passwordEncoder.encode("Controller@123"));
-            master.setDisplayName("Platform Controller");
+            master.setUsername(uLower);
+            master.setPassword(controllerPasswordHash); // already a BCrypt hash from env
+            master.setDisplayName(controllerDisplayName);
             masterAdminRepository.save(master);
-            System.out.println("✅ Default controller account created → username: controller | password: Controller@123");
+            System.out.println("✅ Controller account seeded from environment variables.");
         }
     }
 
@@ -52,8 +64,6 @@ public class MasterAdminService implements ApplicationRunner {
             throw new RuntimeException("Invalid controller credentials");
         }
 
-        // Generate JWT — reuse your existing JwtService
-        // We tag it with role CONTROLLER so the frontend/backend can distinguish
         String token = jwtService.generateControllerToken(master.getUsername());
 
         Map<String, String> response = new HashMap<>();
