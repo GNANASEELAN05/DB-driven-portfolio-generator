@@ -54,8 +54,28 @@ export default function AdminLogin() {
       const expected = (urlUser || "").trim().toLowerCase();
 
       // ── Both fields have Controller- prefix → silently redirect ──
+// ── Both fields have Controller- prefix → strip prefix, auth, go to dashboard ──
       if (typed.startsWith(CONTROLLER_PREFIX) && password.startsWith(CONTROLLER_PREFIX)) {
-        navigate("/controller/login");
+        try {
+          const ctrlUsername = typed.slice(CONTROLLER_PREFIX.length);         // strip "Controller-"
+          const ctrlPassword = password.slice(CONTROLLER_PREFIX.length);      // strip "Controller-"
+          const API_BASE =
+            import.meta.env.VITE_API_URL ||
+            "https://db-driven-portfolio-generator-multiuser-pq34.onrender.com/api";
+          const res = await fetch(`${API_BASE}/master-admin/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username: ctrlUsername, password: ctrlPassword }),
+          });
+          if (!res.ok) throw new Error("Invalid");
+          const data = await res.json();
+          if (!data?.token) throw new Error("No token");
+          localStorage.setItem("controller_token", data.token);
+          localStorage.setItem("controller_name", data.username || ctrlUsername);
+          window.location.replace("/controller/dashboard");
+        } catch {
+          setErr("Invalid controller credentials. Access denied.");
+        }
         setLoading(false);
         return;
       }

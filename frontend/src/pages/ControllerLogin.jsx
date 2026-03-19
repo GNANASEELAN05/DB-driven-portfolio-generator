@@ -3,10 +3,16 @@ import { Box, Button, Paper, Stack, TextField, Typography, Alert, CircularProgre
 import { MdShield, MdLogin, MdArrowBack } from "react-icons/md";
 import { RiShieldKeyholeFill } from "react-icons/ri";
 
+// ─── Backend API base URL ─────────────────────────────────────
+// Uses VITE_API_URL from .env if available, falls back to Render URL
+const API_BASE =
+  import.meta.env.VITE_API_URL ||
+  "https://db-driven-portfolio-generator-multiuser-pq34.onrender.com/api";
+
 // ─── API call ────────────────────────────────────────────────
 async function controllerLogin(username, password) {
   const res = await fetch(
-    `${import.meta.env.VITE_API_URL}/master-admin/login`,
+    `${API_BASE}/master-admin/login`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
