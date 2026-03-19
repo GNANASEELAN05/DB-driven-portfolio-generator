@@ -37,22 +37,24 @@ public class MasterAdminService implements ApplicationRunner {
     private String controllerDisplayName;
 
     // ── Seed controller account on first startup using env vars ───────────
+    // Stores username EXACTLY as typed in env var — no case conversion, spaces allowed
     @Override
     public void run(ApplicationArguments args) {
-        String uLower = controllerUsername.trim().toLowerCase();
-        if (!masterAdminRepository.existsByUsername(uLower)) {
+        String uExact = controllerUsername.trim(); // no toLowerCase — keep exactly as typed
+        if (!masterAdminRepository.existsByUsername(uExact)) {
             MasterAdmin master = new MasterAdmin();
-            master.setUsername(uLower);
+            master.setUsername(uExact);
             master.setPassword(controllerPasswordHash); // already a BCrypt hash from env
             master.setDisplayName(controllerDisplayName);
             masterAdminRepository.save(master);
-            System.out.println("✅ Controller account seeded from environment variables.");
+            System.out.println("✅ Controller account seeded → username: " + uExact);
         }
     }
 
     // ── Authenticate and return JWT token ─────────────────────────────────
+    // Exact match — type username exactly as stored (case-sensitive, spaces matter)
     public Map<String, String> login(String username, String password) {
-        Optional<MasterAdmin> opt = masterAdminRepository.findByUsername(username.trim().toLowerCase());
+        Optional<MasterAdmin> opt = masterAdminRepository.findByUsername(username.trim());
 
         if (opt.isEmpty()) {
             throw new RuntimeException("Invalid controller credentials");
@@ -74,12 +76,14 @@ public class MasterAdminService implements ApplicationRunner {
     }
 
     // ── Create a new controller account (optional utility) ────────────────
+    // Stores username exactly as provided — no case conversion, spaces allowed
     public MasterAdmin createController(String username, String password, String displayName) {
-        if (masterAdminRepository.existsByUsername(username.toLowerCase())) {
+        String uExact = username.trim();
+        if (masterAdminRepository.existsByUsername(uExact)) {
             throw new RuntimeException("Username already exists");
         }
         MasterAdmin master = new MasterAdmin();
-        master.setUsername(username.trim().toLowerCase());
+        master.setUsername(uExact);
         master.setPassword(passwordEncoder.encode(password));
         master.setDisplayName(displayName);
         return masterAdminRepository.save(master);
