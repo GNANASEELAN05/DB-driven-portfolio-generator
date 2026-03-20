@@ -1362,7 +1362,7 @@ function PdfUploadPage({ dark }) {
 // ════════════════════════════════════════
 // UPI QR PAGE
 // ════════════════════════════════════════
-function UpiQrPage({ dark }) {
+function UpiQrPage({ dark, onPreviewChange }) {
   const API_BASE_LOCAL = (
     (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) ||
     "https://db-driven-portfolio-generator.onrender.com/api"
@@ -1373,7 +1373,8 @@ function UpiQrPage({ dark }) {
   const [err, setErr] = useState("");
   const [ok, setOk] = useState("");
   const [loading, setLoading] = useState(true);
-  const [preview, setPreview] = useState({ open: false, tier: "", url: "" });
+  const setPreview = (val) => onPreviewChange(val);
+  const previewPortalRef = React.useRef(document.body);
 
   const fetchList = useCallback(async () => {
     setLoading(true);
@@ -1486,18 +1487,7 @@ function UpiQrPage({ dark }) {
       {renderTier("premium2", "Premium 2 — UPI QR Code")}
 
       {/* QR Preview Modal */}
-      {preview.open && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 600, background: "rgba(5,7,20,0.88)", backdropFilter: "blur(10px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
-          onClick={() => setPreview({ open: false, tier: "", url: "" })}>
-          <div style={{ background: dark ? "#0d0f28" : "#fff", borderRadius: 20, padding: 24, maxWidth: 380, width: "100%", border: "1px solid rgba(99,102,241,0.3)" }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-              <span style={{ fontWeight: 800, fontSize: 14 }}>QR Preview — {preview.tier === "premium1" ? "Premium 1" : "Premium 2"}</span>
-              <button onClick={() => setPreview({ open: false, tier: "", url: "" })} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--cd-text-muted)" }}>{Icon.close}</button>
-            </div>
-            <img src={`${preview.url}?t=${Date.now()}`} alt="QR" style={{ width: "100%", borderRadius: 12, border: "1px solid rgba(0,0,0,0.08)" }} />
-          </div>
-        </div>
-      )}
+
     </div>
   );
 }
@@ -2031,6 +2021,7 @@ export default function ControllerDashboard() {
   const [requestDetail, setRequestDetail] = useState(null);
   const [rejectDetail, setRejectDetail] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null); // holds user object to delete
+  const [upiPreview, setUpiPreview] = useState({ open: false, tier: "", url: "" });
 
   useEffect(() => {
     document.title = "Controller Dashboard";
@@ -2369,7 +2360,7 @@ const pageLabel = { dashboard: "Overview", users: "Registered Users", pdfs: "Pre
           {activePage === "pdfs" && <PdfUploadPage dark={dark} />}
 
           {/* ── UPI QR PAGE ── */}
-          {activePage === "upi" && <UpiQrPage dark={dark} />}
+          {activePage === "upi" && <UpiQrPage dark={dark} onPreviewChange={setUpiPreview} />}
 
           {/* ── PAYMENT REQUESTS PAGE ── */}
           {activePage === "requests" && <RequestsPage dark={dark} onDetailChange={setRequestDetail} onRejectChange={setRejectDetail} />}
@@ -2469,6 +2460,66 @@ const pageLabel = { dashboard: "Overview", users: "Registered Users", pdfs: "Pre
           onCancel={() => setRejectDetail(null)}
           onConfirm={(reason) => { rejectDetail.onConfirm(reason); setRejectDetail(null); }}
         />
+      )}
+
+      {/* UPI QR Preview Modal — root level to avoid stacking context clipping */}
+      {upiPreview.open && (
+        <div
+          style={{
+            position: "fixed", inset: 0, zIndex: 800,
+            background: "rgba(5,7,20,0.88)", backdropFilter: "blur(10px)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: 20, animation: "cd-fade-in 0.2s ease",
+          }}
+          onClick={(e) => e.target === e.currentTarget && setUpiPreview({ open: false, tier: "", url: "" })}
+        >
+          <div style={{
+            width: "100%", maxWidth: 500,
+            background: dark ? "#0d0f28" : "#ffffff",
+            border: "1px solid rgba(99,102,241,0.3)",
+            borderRadius: 20, display: "flex", flexDirection: "column",
+            overflow: "hidden",
+            animation: "cd-modal-in 0.28s cubic-bezier(0.22,1,0.36,1)",
+            boxShadow: "0 32px 80px rgba(0,0,0,0.5)",
+          }}>
+            {/* Header */}
+            <div style={{
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              padding: "14px 20px",
+              borderBottom: `1px solid ${dark ? "rgba(99,102,241,0.18)" : "rgba(99,102,241,0.12)"}`,
+              background: dark ? "rgba(13,15,40,0.9)" : "rgba(255,255,255,0.95)",
+              flexShrink: 0,
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, color: dark ? "#a5b4fc" : "#4f46e5" }}>
+                {Icon.qr}
+                <span style={{ fontWeight: 800, fontSize: 14, color: dark ? "#e2e8f0" : "#1e293b" }}>
+                  QR Preview — {upiPreview.tier === "premium1" ? "Premium 1" : "Premium 2"}
+                </span>
+              </div>
+              <button
+                onClick={() => setUpiPreview({ open: false, tier: "", url: "" })}
+                style={{
+                  width: 30, height: 30, borderRadius: 8,
+                  background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.18)",
+                  color: dark ? "rgba(165,180,252,0.7)" : "#6366f1",
+                  display: "grid", placeItems: "center", cursor: "pointer",
+                }}
+              >{Icon.close}</button>
+            </div>
+            {/* Body */}
+            <div style={{
+              padding: 24,
+              background: dark ? "#0d0f28" : "#ffffff",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <img
+                src={`${upiPreview.url}?t=${Date.now()}`}
+                alt="QR"
+                style={{ maxWidth: "100%", maxHeight: 420, objectFit: "contain", borderRadius: 12, display: "block" }}
+              />
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Delete User Confirm Modal */}
