@@ -12,7 +12,7 @@ import {
 
 const BACKEND_BASE = (
   import.meta.env.VITE_API_URL ||
-  "https://db-driven-portfolio-generator-multiuser-pq34.onrender.com/api"
+  "https://db-driven-portfolio-generator.onrender.com/api"
 ).replace(/\/api\/?$/, "");
 const API_BASE = `${BACKEND_BASE}/api`;
 
