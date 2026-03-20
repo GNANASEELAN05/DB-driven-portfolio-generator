@@ -29,6 +29,9 @@ public class UpiQrImage {
     @PrePersist
     public void prePersist() { this.uploadedAt = LocalDateTime.now(); }
 
+    @PreUpdate
+    public void preUpdate() { this.uploadedAt = LocalDateTime.now(); }
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getTier() { return tier; }
