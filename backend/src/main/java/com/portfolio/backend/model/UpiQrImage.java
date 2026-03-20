@@ -20,7 +20,6 @@ public class UpiQrImage {
     @Column(nullable = false)
     private String contentType;
 
-    @Lob
     @Column(columnDefinition = "bytea", nullable = false)
     private byte[] data;
 
