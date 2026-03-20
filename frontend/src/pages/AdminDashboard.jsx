@@ -74,8 +74,10 @@ import {
   MdArrowUpward,
   MdMoreHoriz,
   MdStar,
-  MdClose,
-  MdSchool,
+MdClose,
+MdCheckCircle,
+MdCancel,
+MdSchool,
   MdBadge,
 } from "react-icons/md";
 
@@ -3212,7 +3214,8 @@ const saveEditSkill = (i) => {
                           const statusColor  = isApproved ? "#10b981" : isRejected ? "#f43f5e" : "#f59e0b";
                           const statusBg     = isApproved ? "rgba(16,185,129,0.10)" : isRejected ? "rgba(244,63,94,0.09)" : "rgba(245,158,11,0.10)";
                           const statusBorder = isApproved ? "rgba(16,185,129,0.30)" : isRejected ? "rgba(244,63,94,0.28)" : "rgba(245,158,11,0.30)";
-                          const statusLabel  = isApproved ? "✅ Approved" : isRejected ? "❌ Rejected" : "⏳ Pending";
+                          const statusLabel  = isApproved ? "Approved" : isRejected ? "Rejected" : "⏳ Pending";
+                          const StatusIcon   = isApproved ? MdCheckCircle : isRejected ? MdCancel : null;
                           const reasonText   = isApproved
                             ? "Payment verified. Access active!"
                             : isRejected
@@ -3283,6 +3286,7 @@ const saveEditSkill = (i) => {
                               <TableCell>
                                 <Chip
                                   size="small"
+                                  icon={StatusIcon ? <StatusIcon style={{ fontSize: 13, color: statusColor }} /> : undefined}
                                   label={statusLabel}
                                   sx={{
                                     borderRadius: 2,
@@ -3292,6 +3296,7 @@ const saveEditSkill = (i) => {
                                     border: `1px solid ${statusBorder}`,
                                     color: statusColor,
                                     whiteSpace: "nowrap",
+                                    "& .MuiChip-icon": { color: statusColor },
                                   }}
                                 />
                               </TableCell>
@@ -3466,6 +3471,11 @@ const saveEditSkill = (i) => {
           onGeneratePremium2={() => {
             setVersionPickerOpen(false);
             navigate(`/${username}/adminpanel/premium2`);
+          }}
+          onGoToStatus={() => {
+            setVersionPickerOpen(false);
+            setActive("status");
+            fetchRequestStatus();
           }}
         />
       </Box>   {/* ← this is the closing tag that was already there */}

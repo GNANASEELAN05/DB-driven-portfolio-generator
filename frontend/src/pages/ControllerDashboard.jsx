@@ -1503,6 +1503,152 @@ function UpiQrPage({ dark }) {
 }
 
 // ════════════════════════════════════════
+// REJECT REASON MODAL
+// ════════════════════════════════════════
+function RejectReasonModal({ dark, username, version, onCancel, onConfirm }) {
+  const [reason, setReason] = React.useState("");
+  const canReject = reason.trim().length > 0;
+
+  return (
+    <div
+      style={{
+        position: "fixed", inset: 0, zIndex: 500,
+        background: "rgba(5,7,20,0.82)", backdropFilter: "blur(10px)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: 24, animation: "cd-fade-in 0.18s ease",
+      }}
+      onClick={(e) => e.target === e.currentTarget && onCancel()}
+    >
+      <div style={{
+        width: "100%", maxWidth: 440,
+        background: dark ? "#0d0f28" : "#ffffff",
+        border: "1px solid rgba(244,63,94,0.3)",
+        borderRadius: 20, overflow: "hidden",
+        animation: "cd-modal-in 0.26s cubic-bezier(0.22,1,0.36,1)",
+        boxShadow: "0 28px 70px rgba(0,0,0,0.45)",
+      }}>
+
+        {/* Header */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "14px 18px",
+          borderBottom: "1px solid rgba(244,63,94,0.18)",
+          background: dark ? "rgba(13,15,40,0.95)" : "rgba(255,245,245,0.95)",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ color: "#f43f5e" }}>{Icon.reject}</span>
+            <span style={{ fontWeight: 800, fontSize: 14, color: dark ? "#e2e8f0" : "#1e293b" }}>
+              Reject Payment Request
+            </span>
+          </div>
+          <button
+            onClick={onCancel}
+            style={{
+              width: 28, height: 28, borderRadius: 7,
+              background: "rgba(244,63,94,0.08)", border: "1px solid rgba(244,63,94,0.18)",
+              color: dark ? "rgba(253,164,175,0.7)" : "#e11d48",
+              display: "grid", placeItems: "center", cursor: "pointer",
+            }}
+          >{Icon.close}</button>
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: "22px 20px", display: "flex", flexDirection: "column", gap: 16 }}>
+
+          {/* Info block */}
+          <div style={{
+            padding: "12px 14px", borderRadius: 10,
+            background: dark ? "rgba(244,63,94,0.05)" : "rgba(244,63,94,0.04)",
+            border: "1px solid rgba(244,63,94,0.14)",
+            fontSize: 13, lineHeight: 1.7,
+            color: dark ? "rgba(226,232,240,0.82)" : "#334155",
+          }}>
+            Rejecting <strong>Premium {version}</strong> request from{" "}
+            <strong>@{username}</strong>.<br />
+            <span style={{ opacity: 0.55, fontSize: 11.5 }}>
+              This will be shown to the user in their Request Status page.
+            </span>
+          </div>
+
+          {/* Reason textarea */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <label style={{
+              fontSize: 11, fontWeight: 700, letterSpacing: "0.07em",
+              textTransform: "uppercase",
+              color: dark ? "rgba(253,164,175,0.7)" : "#e11d48",
+            }}>
+              Rejection Reason <span style={{ color: "#f43f5e" }}>*</span>
+            </label>
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="e.g. Transaction ID not found, payment amount mismatch, duplicate request…"
+              rows={3}
+              style={{
+                width: "100%",
+                padding: "10px 12px",
+                borderRadius: 10,
+                border: `1.5px solid ${reason.trim() ? "rgba(244,63,94,0.45)" : "rgba(244,63,94,0.22)"}`,
+                background: dark ? "rgba(244,63,94,0.04)" : "rgba(244,63,94,0.03)",
+                color: dark ? "rgba(226,232,240,0.9)" : "#1e293b",
+                fontSize: 13,
+                lineHeight: 1.6,
+                resize: "vertical",
+                outline: "none",
+                fontFamily: "inherit",
+                boxSizing: "border-box",
+                transition: "border-color 0.15s",
+              }}
+              onFocus={(e) => e.target.style.borderColor = "rgba(244,63,94,0.7)"}
+              onBlur={(e) => e.target.style.borderColor = reason.trim() ? "rgba(244,63,94,0.45)" : "rgba(244,63,94,0.22)"}
+            />
+            <div style={{
+              fontSize: 11, opacity: 0.5, textAlign: "right",
+              color: dark ? "#fca5a5" : "#e11d48",
+            }}>
+              {reason.trim().length} / 500 chars
+              {!canReject && <span style={{ marginLeft: 8, color: "#f59e0b" }}>← required to reject</span>}
+            </div>
+          </div>
+
+          {/* Action buttons */}
+          <div style={{ display: "flex", gap: 10 }}>
+            <button
+              onClick={onCancel}
+              style={{
+                flex: 1, padding: "9px 0", borderRadius: 10,
+                fontWeight: 700, fontSize: 13, cursor: "pointer",
+                background: dark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)",
+                border: `1px solid ${dark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.12)"}`,
+                color: dark ? "rgba(226,232,240,0.7)" : "#64748b",
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => canReject && onConfirm(reason.trim())}
+              disabled={!canReject}
+              style={{
+                flex: 1, padding: "9px 0", borderRadius: 10,
+                fontWeight: 800, fontSize: 13, cursor: canReject ? "pointer" : "not-allowed",
+                background: canReject ? "rgba(244,63,94,0.14)" : "rgba(244,63,94,0.05)",
+                border: `1px solid ${canReject ? "rgba(244,63,94,0.4)" : "rgba(244,63,94,0.15)"}`,
+                color: canReject ? "#f43f5e" : "rgba(244,63,94,0.35)",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                transition: "all 0.15s",
+              }}
+            >
+              {Icon.reject}
+              {canReject ? "Confirm Reject" : "Enter reason first"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════
 // PAYMENT REQUESTS PAGE
 // ════════════════════════════════════════
 function RequestsPage({ dark, onDetailChange, onRejectChange }) {
@@ -1554,11 +1700,14 @@ function RequestsPage({ dark, onDetailChange, onRejectChange }) {
     const req = requests.find(r => r.id === id);
     onRejectChange({
       id, username: req?.username || "", version: req?.version || "",
-      onConfirm: async () => {
+      onConfirm: async (reason) => {
         setActing(p => ({ ...p, [id]: "reject" }));
         setErr(""); setOk("");
         try {
-          const res = await apiFetch(`/master-admin/payment-requests/${id}/reject`, { method: "PATCH" });
+          const res = await apiFetch(`/master-admin/payment-requests/${id}/reject`, {
+            method: "PATCH",
+            body: JSON.stringify({ rejectionReason: reason || "" }),
+          });
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           setOk("Request rejected.");
           onDetailChange(null);
@@ -2115,8 +2264,13 @@ const pageLabel = { dashboard: "Overview", users: "Registered Users", pdfs: "Pre
                 </div>
               )}
               {requestDetail.status === "REJECTED" && (
-                <div style={{ padding: "10px 12px", borderRadius: 9, background: "rgba(244,63,94,0.06)", border: "1px solid rgba(244,63,94,0.2)", color: "#f43f5e", fontSize: 13, fontWeight: 600 }}>
-                  ❌ This request was rejected.
+                <div style={{ padding: "10px 12px", borderRadius: 9, background: "rgba(244,63,94,0.06)", border: "1px solid rgba(244,63,94,0.2)", color: "#f43f5e", fontSize: 13, fontWeight: 600, display: "flex", flexDirection: "column", gap: 4 }}>
+                  <span>❌ This request was rejected.</span>
+                  {requestDetail.rejectionReason && (
+                    <span style={{ fontSize: 12, fontWeight: 500, opacity: 0.85, color: dark ? "rgba(253,164,175,0.85)" : "#be123c" }}>
+                      Reason: {requestDetail.rejectionReason}
+                    </span>
+                  )}
                 </div>
               )}
             </div>
@@ -2124,43 +2278,15 @@ const pageLabel = { dashboard: "Overview", users: "Registered Users", pdfs: "Pre
         </div>
       )}
 
-      {/* Reject Confirm Modal — also at root level */}
+      {/* Reject Confirm Modal — with reason input */}
       {rejectDetail && (
-        <div style={{
-          position: "fixed", inset: 0, zIndex: 500,
-          background: "rgba(5,7,20,0.82)", backdropFilter: "blur(10px)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          padding: 24, animation: "cd-fade-in 0.18s ease",
-        }}
-          onClick={(e) => e.target === e.currentTarget && setRejectDetail(null)}
-        >
-          <div style={{
-            width: "100%", maxWidth: 420,
-            background: dark ? "#0d0f28" : "#ffffff",
-            border: "1px solid rgba(244,63,94,0.3)",
-            borderRadius: 20, overflow: "hidden",
-            animation: "cd-modal-in 0.26s cubic-bezier(0.22,1,0.36,1)",
-            boxShadow: "0 28px 70px rgba(0,0,0,0.45)",
-          }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderBottom: "1px solid rgba(244,63,94,0.18)", background: dark ? "rgba(13,15,40,0.95)" : "rgba(255,245,245,0.95)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ color: "#f43f5e" }}>{Icon.reject}</span>
-                <span style={{ fontWeight: 800, fontSize: 14, color: dark ? "#e2e8f0" : "#1e293b" }}>Reject Payment Request</span>
-              </div>
-              <button onClick={() => setRejectDetail(null)} style={{ width: 28, height: 28, borderRadius: 7, background: "rgba(244,63,94,0.08)", border: "1px solid rgba(244,63,94,0.18)", color: dark ? "rgba(253,164,175,0.7)" : "#e11d48", display: "grid", placeItems: "center", cursor: "pointer" }}>{Icon.close}</button>
-            </div>
-            <div style={{ padding: "22px 20px", display: "flex", flexDirection: "column", gap: 16 }}>
-              <div style={{ padding: "14px 16px", borderRadius: 12, background: dark ? "rgba(244,63,94,0.06)" : "rgba(244,63,94,0.04)", border: "1px solid rgba(244,63,94,0.15)", fontSize: 13.5, lineHeight: 1.7, color: dark ? "rgba(226,232,240,0.88)" : "#334155" }}>
-                Are you sure you want to reject the <strong>Premium {rejectDetail.version}</strong> payment request from <strong>@{rejectDetail.username}</strong>?<br />
-                <span style={{ opacity: 0.6, fontSize: 12 }}>This action cannot be undone.</span>
-              </div>
-              <div style={{ display: "flex", gap: 10 }}>
-                <button onClick={() => setRejectDetail(null)} style={{ flex: 1, padding: "9px 0", borderRadius: 10, fontWeight: 700, fontSize: 13, cursor: "pointer", background: dark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)", border: `1px solid ${dark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.12)"}`, color: dark ? "rgba(226,232,240,0.7)" : "#64748b" }}>Cancel</button>
-                <button onClick={() => { rejectDetail.onConfirm(); setRejectDetail(null); }} style={{ flex: 1, padding: "9px 0", borderRadius: 10, fontWeight: 800, fontSize: 13, cursor: "pointer", background: "rgba(244,63,94,0.12)", border: "1px solid rgba(244,63,94,0.3)", color: "#f43f5e", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>{Icon.reject} Yes, Reject</button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <RejectReasonModal
+          dark={dark}
+          username={rejectDetail.username}
+          version={rejectDetail.version}
+          onCancel={() => setRejectDetail(null)}
+          onConfirm={(reason) => { rejectDetail.onConfirm(reason); setRejectDetail(null); }}
+        />
       )}
     </div>
   );

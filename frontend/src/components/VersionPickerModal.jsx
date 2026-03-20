@@ -35,6 +35,7 @@ export default function VersionPickerModal({
   onGenerateFree,
   onGeneratePremium1,
   onGeneratePremium2,
+  onGoToStatus,
 }) {
   const [step, setStep]       = useState(STEP_PICKER);
   const [activeVersion, setActiveVersion] = useState(null); // 1 | 2
@@ -444,7 +445,9 @@ const checkQr = () => {
                       <Button
                         variant="outlined" size="small"
                         sx={{ borderRadius: 999, borderColor: activePlan.color, color: activePlan.color }}
-                        onClick={fetchPremiumLive}
+                        onClick={() => {
+                          if (typeof onGoToStatus === "function") onGoToStatus();
+                        }}
                         startIcon={premiumLoading ? <CircularProgress size={12} color="inherit" /> : null}
                       >
                         Check Status
