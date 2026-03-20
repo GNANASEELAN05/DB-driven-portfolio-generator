@@ -161,13 +161,13 @@ export default function AdminLogin() {
               size="small"
               sx={{
                 position: "absolute",
-                top: 14,
-                right: 14,
+                top: 35,
+                right: 35,
                 color: "rgba(255,165,0,0.55)",
                 background: "rgba(255,165,0,0.07)",
                 border: "1px solid rgba(255,165,0,0.2)",
-                width: 34,
-                height: 34,
+                width: 30,
+                height: 30,
                 fontSize: 17,
                 transition: "all 0.25s ease",
                 "&:hover": {
