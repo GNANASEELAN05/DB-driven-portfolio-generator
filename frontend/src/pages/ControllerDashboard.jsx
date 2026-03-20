@@ -104,8 +104,11 @@ function UserDetailPanel({ user, onClose, dark }) {
   const [tab, setTab] = useState("overview");
   const [data, setData] = useState({});
   const [loading, setLoading] = useState(true);
-const [projectModal, setProjectModal] = useState(null); // holds project object
-const [langModal, setLangModal] = useState(null);// holds project object
+const [projectModal, setProjectModal] = useState(null);
+const [langModal, setLangModal] = useState(null);
+const [resumePreview, setResumePreview] = useState({ open: false, title: "", blobUrl: "", loading: false });
+const [achModal, setAchModal] = useState(null);
+const [certPreview, setCertPreview] = useState({ open: false, title: "", blobUrl: "", loading: false, isImage: false });
   const username = user?.username;
 
   useEffect(() => {
@@ -585,14 +588,269 @@ const [langModal, setLangModal] = useState(null);// holds project object
                   {achievements.length === 0 ? <div className="cd-empty">No achievements added yet.</div>
                     : achievements.map((a, i) => (
                       <div className="cd-item-card" key={a.id || i}>
-                        <div className="cd-item-row">
-                          <span className="cd-item-title">{a.title}</span>
+                        <div className="cd-item-row" style={{ alignItems: "center" }}>
+                          <span className="cd-item-serial">{i + 1}.</span>
+                          <span className="cd-item-title" style={{ flex: 1 }}>{a.title}</span>
                           {a.year && <span className="cd-item-year">{a.year}</span>}
+                          {/* Certificate preview — placed before eye so it doesn't clip */}
+                          {a.certificateFileName && (
+                            <button
+                              className="cd-pdf-action-btn"
+                              title="View Certificate"
+                              style={{
+                                marginRight: 4, flexShrink: 0,
+                                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                                width: 28, height: 28, borderRadius: 7,
+                                background: "rgba(251,191,36,0.10)",
+                                border: "1px solid rgba(251,191,36,0.30)",
+                                color: "#fbbf24", cursor: "pointer",
+                              }}
+                              onClick={async () => {
+                                setCertPreview({ open: true, title: `Certificate — ${a.title || "Achievement"}`, blobUrl: "", loading: true, isImage: false });
+                                try {
+                                  const token = localStorage.getItem("controller_token");
+                                  const res = await fetch(
+                                    `${API_BASE}/u/${(username || "").toLowerCase()}/portfolio/achievements/${a.id}/certificate`,
+                                    { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+                                  );
+                                  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                                  const contentType = res.headers.get("content-type") || "application/pdf";
+                                  const blob = await res.blob();
+                                  const url = URL.createObjectURL(blob);
+                                  setCertPreview({ open: true, title: `Certificate — ${a.title || "Achievement"}`, blobUrl: url, loading: false, isImage: contentType.startsWith("image/") });
+                                } catch {
+                                  setCertPreview(p => ({ ...p, loading: false }));
+                                  alert("Could not load certificate.");
+                                }
+                              }}
+                            >
+                              {Icon.award}
+                            </button>
+                          )}
+                          {/* Eye — detail modal */}
+                          <button
+                            className="cd-pdf-action-btn"
+                            title="View Details"
+                            style={{ marginLeft: 6, flexShrink: 0 }}
+                            onClick={() => setAchModal(a)}
+                          >{Icon.eye}</button>
                         </div>
                         {a.issuer && <div className="cd-item-sub">{a.issuer}</div>}
-                        {a.link && <a href={a.link} target="_blank" rel="noopener noreferrer" className="cd-ext-link">{Icon.link} Link</a>}
+                        {a.certificateFileName ? (
+                          <div style={{ fontSize: 11, opacity: 0.55, marginTop: 3 }}>
+                            📎 {a.certificateFileName}
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: 11, opacity: 0.35, marginTop: 3, fontStyle: "italic" }}>
+                            No certificate uploaded
+                          </div>
+                        )}
                       </div>
                     ))}
+
+                  {/* Achievement Detail Modal */}
+                  {achModal && (
+                    <div
+                      style={{
+                        position: "fixed", inset: 0, zIndex: 500,
+                        background: "rgba(5,7,20,0.82)", backdropFilter: "blur(10px)",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        padding: 24, animation: "cd-fade-in 0.18s ease",
+                      }}
+                      onClick={(e) => e.target === e.currentTarget && setAchModal(null)}
+                    >
+                      <div style={{
+                        width: "100%", maxWidth: 520,
+                        background: dark ? "#0d0f28" : "#ffffff",
+                        border: "1px solid rgba(251,191,36,0.3)",
+                        borderRadius: 20, overflow: "hidden",
+                        animation: "cd-modal-in 0.26s cubic-bezier(0.22,1,0.36,1)",
+                        boxShadow: "0 28px 70px rgba(0,0,0,0.45)",
+                      }}>
+                        {/* Header */}
+                        <div style={{
+                          display: "flex", alignItems: "center", justifyContent: "space-between",
+                          padding: "14px 18px",
+                          borderBottom: "1px solid rgba(251,191,36,0.18)",
+                          background: dark ? "rgba(13,15,40,0.95)" : "rgba(255,253,235,0.95)",
+                        }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <span style={{ color: "#fbbf24" }}>{Icon.award}</span>
+                            <span style={{ fontWeight: 800, fontSize: 14, color: dark ? "#e2e8f0" : "#1e293b" }}>
+                              {achModal.title}
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => setAchModal(null)}
+                            style={{
+                              width: 28, height: 28, borderRadius: 7,
+                              background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.18)",
+                              color: dark ? "rgba(251,191,36,0.7)" : "#d97706",
+                              display: "grid", placeItems: "center", cursor: "pointer",
+                            }}
+                          >{Icon.close}</button>
+                        </div>
+                        {/* Body */}
+                        <div style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: 12, maxHeight: "70vh", overflowY: "auto" }}>
+                          {[
+                            ["Title", achModal.title],
+                            ["Issuer", achModal.issuer],
+                            ["Year", achModal.year],
+                            ["Description", achModal.description],
+                          ].filter(([, v]) => v).map(([label, val]) => (
+                            <div key={label} style={{
+                              display: "flex", flexDirection: "column", gap: 4,
+                              padding: "10px 13px", borderRadius: 10,
+                              background: dark ? "rgba(251,191,36,0.04)" : "rgba(251,191,36,0.03)",
+                              border: "1px solid rgba(251,191,36,0.12)",
+                            }}>
+                              <span style={{ fontSize: 10.5, fontWeight: 700, color: dark ? "rgba(251,191,36,0.55)" : "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em" }}>{label}</span>
+                              <span style={{ fontSize: 13, fontWeight: 600, color: dark ? "rgba(226,232,240,0.88)" : "#334155", lineHeight: 1.6 }}>{String(val)}</span>
+                            </div>
+                          ))}
+                          {/* Links row */}
+                          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
+                            {achModal.link && (
+                              <a href={achModal.link} target="_blank" rel="noopener noreferrer"
+                                style={{
+                                  display: "inline-flex", alignItems: "center", gap: 5,
+                                  padding: "6px 14px", borderRadius: 8, fontSize: 12.5, fontWeight: 700,
+                                  background: "rgba(6,182,212,0.1)", border: "1px solid rgba(6,182,212,0.25)",
+                                  color: "#22d3ee", textDecoration: "none",
+                                }}>{Icon.globe} View Link</a>
+                            )}
+                            {achModal.certificateFileName && (
+                              <button
+                                style={{
+                                  display: "inline-flex", alignItems: "center", gap: 5,
+                                  padding: "6px 14px", borderRadius: 8, fontSize: 12.5, fontWeight: 700,
+                                  background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.25)",
+                                  color: "#fbbf24", cursor: "pointer",
+                                }}
+                                onClick={async () => {
+                                  setAchModal(null);
+                                  setCertPreview({ open: true, title: `Certificate — ${achModal.title || "Achievement"}`, blobUrl: "", loading: true, isImage: false });
+                                  try {
+                                    const token = localStorage.getItem("controller_token");
+                                    const res = await fetch(
+                                      `${API_BASE}/u/${(username || "").toLowerCase()}/portfolio/achievements/${achModal.id}/certificate`,
+                                      { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+                                    );
+                                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                                    const contentType = res.headers.get("content-type") || "application/pdf";
+                                    const blob = await res.blob();
+                                    const url = URL.createObjectURL(blob);
+                                    setCertPreview({ open: true, title: `Certificate — ${achModal.title || "Achievement"}`, blobUrl: url, loading: false, isImage: contentType.startsWith("image/") });
+                                  } catch {
+                                    setCertPreview(p => ({ ...p, loading: false }));
+                                    alert("Could not load certificate.");
+                                  }
+                                }}
+                              >{Icon.award} View Certificate</button>
+                            )}
+                          </div>
+                          {!achModal.issuer && !achModal.year && !achModal.description && !achModal.link && !achModal.certificateFileName && (
+                            <div style={{ textAlign: "center", color: "var(--cd-text-muted)", fontSize: 13, padding: "16px 0" }}>No additional details available.</div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Certificate Preview Modal */}
+                  {certPreview.open && (
+                    <div
+                      style={{
+                        position: "fixed", inset: 0, zIndex: 600,
+                        background: "rgba(5,7,20,0.88)", backdropFilter: "blur(10px)",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        padding: 20, animation: "cd-fade-in 0.2s ease",
+                      }}
+                      onClick={(e) => {
+                        if (e.target === e.currentTarget) {
+                          if (certPreview.blobUrl) URL.revokeObjectURL(certPreview.blobUrl);
+                          setCertPreview({ open: false, title: "", blobUrl: "", loading: false, isImage: false });
+                        }
+                      }}
+                    >
+                      <div style={{
+                        width: "100%", maxWidth: 860, height: "88vh",
+                        background: dark ? "#0d0f28" : "#ffffff",
+                        border: "1px solid rgba(251,191,36,0.3)",
+                        borderRadius: 20, display: "flex", flexDirection: "column",
+                        overflow: "hidden",
+                        animation: "cd-modal-in 0.28s cubic-bezier(0.22,1,0.36,1)",
+                        boxShadow: "0 32px 80px rgba(0,0,0,0.5)",
+                      }}>
+                        {/* Header */}
+                        <div style={{
+                          display: "flex", alignItems: "center", justifyContent: "space-between",
+                          padding: "14px 20px",
+                          borderBottom: `1px solid ${dark ? "rgba(251,191,36,0.18)" : "rgba(251,191,36,0.12)"}`,
+                          background: dark ? "rgba(13,15,40,0.9)" : "rgba(255,253,235,0.95)",
+                          flexShrink: 0,
+                        }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#fbbf24" }}>
+                            {Icon.award}
+                            <span style={{ fontWeight: 800, fontSize: 14, color: dark ? "#e2e8f0" : "#1e293b" }}>{certPreview.title}</span>
+                          </div>
+                          <button
+                            onClick={() => {
+                              if (certPreview.blobUrl) URL.revokeObjectURL(certPreview.blobUrl);
+                              setCertPreview({ open: false, title: "", blobUrl: "", loading: false, isImage: false });
+                            }}
+                            style={{
+                              width: 30, height: 30, borderRadius: 8,
+                              background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.18)",
+                              color: dark ? "rgba(251,191,36,0.7)" : "#d97706",
+                              display: "grid", placeItems: "center", cursor: "pointer",
+                            }}
+                          >{Icon.close}</button>
+                        </div>
+                        {/* Body */}
+                        <div style={{ flex: 1, overflow: "hidden", background: "#000", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          {certPreview.loading ? (
+                            <div style={{ display: "flex", alignItems: "center", gap: 10, color: "rgba(148,163,184,0.6)", fontSize: 13 }}>
+                              <div className="cd-loader" /> Loading certificate…
+                            </div>
+                          ) : certPreview.isImage && certPreview.blobUrl ? (
+                            <img src={certPreview.blobUrl} alt={certPreview.title}
+                              style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", display: "block" }} />
+                          ) : !certPreview.isImage && certPreview.blobUrl ? (
+                            <iframe
+                              src={`${certPreview.blobUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
+                              style={{ width: "100%", height: "100%", border: "none", display: "block" }}
+                              title={certPreview.title}
+                            />
+                          ) : (
+                            <div style={{ color: "rgba(148,163,184,0.6)", fontSize: 13 }}>Preview not available.</div>
+                          )}
+                        </div>
+                        {/* Footer */}
+                        <div style={{
+                          display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+                          padding: "12px 20px",
+                          borderTop: `1px solid ${dark ? "rgba(251,191,36,0.18)" : "rgba(251,191,36,0.12)"}`,
+                          background: dark ? "rgba(13,15,40,0.9)" : "rgba(255,253,235,0.95)",
+                          flexShrink: 0,
+                        }}>
+                          <button
+                            onClick={() => {
+                              if (certPreview.blobUrl) URL.revokeObjectURL(certPreview.blobUrl);
+                              setCertPreview({ open: false, title: "", blobUrl: "", loading: false, isImage: false });
+                            }}
+                            style={{
+                              display: "inline-flex", alignItems: "center", gap: 6,
+                              padding: "7px 16px", borderRadius: 8,
+                              background: "rgba(244,63,94,0.08)", border: "1px solid rgba(244,63,94,0.2)",
+                              color: dark ? "rgba(253,164,175,0.8)" : "#e11d48",
+                              fontSize: 12.5, fontWeight: 700, cursor: "pointer",
+                            }}
+                          >{Icon.close} Close</button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 {tab === "socials" && (() => {
@@ -664,18 +922,19 @@ const [langModal, setLangModal] = useState(null);// holds project object
                           title="Preview Resume"
                           style={{ cursor: "pointer", flexShrink: 0 }}
                           onClick={async () => {
+                            setResumePreview({ open: true, title: r.fileName || "Resume.pdf", blobUrl: "", loading: true });
                             try {
                               const token = localStorage.getItem("controller_token");
                               const res = await fetch(
-                                `${API_BASE}/u/${(username || "").toLowerCase()}/resume/view/${r.id}`,
+                                `${API_BASE}/u/${(username || "").toLowerCase()}/resume/${r.id}/view`,
                                 { headers: token ? { Authorization: `Bearer ${token}` } : {} }
                               );
                               if (!res.ok) throw new Error(`HTTP ${res.status}`);
                               const blob = await res.blob();
                               const url = URL.createObjectURL(blob);
-                              window.open(url, "_blank", "noopener,noreferrer");
-                              setTimeout(() => URL.revokeObjectURL(url), 60000);
+                              setResumePreview({ open: true, title: r.fileName || "Resume.pdf", blobUrl: url, loading: false });
                             } catch {
+                              setResumePreview(p => ({ ...p, loading: false }));
                               alert("Could not load resume preview.");
                             }
                           }}
@@ -687,7 +946,111 @@ const [langModal, setLangModal] = useState(null);// holds project object
                   ))}
                 </div>
               )}
- 
+
+              {/* Resume inline preview modal */}
+              {resumePreview.open && (
+                <div
+                  style={{
+                    position: "fixed", inset: 0, zIndex: 500,
+                    background: "rgba(5,7,20,0.85)",
+                    backdropFilter: "blur(10px)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    padding: 20,
+                    animation: "cd-fade-in 0.2s ease",
+                  }}
+                  onClick={(e) => {
+                    if (e.target === e.currentTarget) {
+                      if (resumePreview.blobUrl) URL.revokeObjectURL(resumePreview.blobUrl);
+                      setResumePreview({ open: false, title: "", blobUrl: "", loading: false });
+                    }
+                  }}
+                >
+                  <div style={{
+                    width: "100%", maxWidth: 860, height: "88vh",
+                    background: dark ? "#0d0f28" : "#ffffff",
+                    border: "1px solid rgba(99,102,241,0.3)",
+                    borderRadius: 20, display: "flex", flexDirection: "column",
+                    overflow: "hidden",
+                    animation: "cd-modal-in 0.28s cubic-bezier(0.22,1,0.36,1)",
+                    boxShadow: "0 32px 80px rgba(0,0,0,0.5)",
+                  }}>
+                    {/* Header */}
+                    <div style={{
+                      display: "flex", alignItems: "center", justifyContent: "space-between",
+                      padding: "14px 20px",
+                      borderBottom: `1px solid ${dark ? "rgba(99,102,241,0.18)" : "rgba(99,102,241,0.12)"}`,
+                      background: dark ? "rgba(13,15,40,0.9)" : "rgba(255,255,255,0.95)",
+                      flexShrink: 0,
+                    }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, color: dark ? "#a5b4fc" : "#4f46e5" }}>
+                        {Icon.pdf}
+                        <span style={{ fontWeight: 800, fontSize: 14, color: dark ? "#e2e8f0" : "#1e293b" }}>
+                          {resumePreview.title}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => {
+                          if (resumePreview.blobUrl) URL.revokeObjectURL(resumePreview.blobUrl);
+                          setResumePreview({ open: false, title: "", blobUrl: "", loading: false });
+                        }}
+                        style={{
+                          width: 30, height: 30, borderRadius: 8,
+                          background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.18)",
+                          color: dark ? "rgba(165,180,252,0.7)" : "#6366f1",
+                          display: "grid", placeItems: "center", cursor: "pointer",
+                        }}
+                      >{Icon.close}</button>
+                    </div>
+                    {/* Body */}
+                    <div style={{ flex: 1, overflow: "hidden", background: "#000" }}>
+                      {resumePreview.loading ? (
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "rgba(148,163,184,0.6)", fontSize: 13, gap: 10 }}>
+                          <div className="cd-loader" /> Loading preview…
+                        </div>
+                      ) : resumePreview.blobUrl ? (
+                        <iframe
+                          src={
+                            /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)
+                              ? `https://docs.google.com/viewer?url=${encodeURIComponent(resumePreview.blobUrl)}&embedded=true`
+                              : `${resumePreview.blobUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`
+                          }
+                          style={{ width: "100%", height: "100%", border: "none", display: "block" }}
+                          title={resumePreview.title}
+                        />
+                      ) : (
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "rgba(148,163,184,0.6)", fontSize: 13 }}>
+                          Preview not available.
+                        </div>
+                      )}
+                    </div>
+                    {/* Footer */}
+                    <div style={{
+                      display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+                      padding: "12px 20px",
+                      borderTop: `1px solid ${dark ? "rgba(99,102,241,0.18)" : "rgba(99,102,241,0.12)"}`,
+                      background: dark ? "rgba(13,15,40,0.9)" : "rgba(255,255,255,0.95)",
+                      flexShrink: 0,
+                    }}>
+                      <button
+                        onClick={() => {
+                          if (resumePreview.blobUrl) URL.revokeObjectURL(resumePreview.blobUrl);
+                          setResumePreview({ open: false, title: "", blobUrl: "", loading: false });
+                        }}
+                        style={{
+                          display: "inline-flex", alignItems: "center", gap: 6,
+                          padding: "7px 16px", borderRadius: 8,
+                          background: "rgba(244,63,94,0.08)", border: "1px solid rgba(244,63,94,0.2)",
+                          color: dark ? "rgba(253,164,175,0.8)" : "#e11d48",
+                          fontSize: 12.5, fontWeight: 700, cursor: "pointer",
+                        }}
+                      >
+                        {Icon.close} Close
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {tab === "portfolio" && (
                 <div className="cd-panel-section">
                   <div className="cd-info-title" style={{ marginBottom: 8 }}>Generated Portfolios</div>
