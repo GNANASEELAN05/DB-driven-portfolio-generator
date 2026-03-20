@@ -56,6 +56,9 @@ public class SecurityConfig {
                 // ── PUBLIC: PDF view for iframe ────────────────────────────
                 .requestMatchers(HttpMethod.GET, "/api/master-admin/preview-pdfs/*/view").permitAll()
 
+                // ── CONTROLLER: user resume list ───────────────────────────
+                .requestMatchers(HttpMethod.GET, "/api/master-admin/users/*/resumes").permitAll()
+
                 // ── payment ────────────────────────────────────────────────
                 .requestMatchers("/api/payment/**").authenticated()
 
@@ -65,8 +68,6 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/u/*/projects/featured").permitAll()
 
                 // ── CONTROLLER/OWNER: resume admin endpoints ───────────────
-                // permitAll here so the token (CONTROLLER or ADMIN) passes through
-                // to the controller method which does its own isOwnerOrController() check
                 .requestMatchers(HttpMethod.GET, "/api/u/*/resume/list-admin").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/u/*/resume/*/view").permitAll()
 

@@ -104,7 +104,8 @@ function UserDetailPanel({ user, onClose, dark }) {
   const [tab, setTab] = useState("overview");
   const [data, setData] = useState({});
   const [loading, setLoading] = useState(true);
-  const [projectModal, setProjectModal] = useState(null); // holds project object
+const [projectModal, setProjectModal] = useState(null); // holds project object
+const [langModal, setLangModal] = useState(null);// holds project object
   const username = user?.username;
 
   useEffect(() => {
@@ -122,7 +123,7 @@ function UserDetailPanel({ user, onClose, dark }) {
       apiFetch(`/u/${username}/portfolio/languages`)
         .then(r => r.ok ? r.json() : Promise.reject(r.status))
         .catch(() => []),
-      apiFetch(`/u/${username}/resume/list-admin`).then(r => r.json()).catch(() => []),
+      apiFetch(`/master-admin/users/${username}/resumes`).then(r => r.ok ? r.json() : Promise.reject()).catch(() => []),
     ]).then(results => {
       const [profile, skills, projects, achievements, socials, education, experience, languages, resumes] = results;
       setData({
@@ -170,8 +171,10 @@ function UserDetailPanel({ user, onClose, dark }) {
   const allSkills = ["frontend", "backend", "database", "tools"].flatMap(cat =>
     (skillsRaw[cat] || "").split(",").filter(Boolean).map(s => ({ cat, name: s.trim() }))
   );
-  const resumeList = Array.isArray(data.resumes?.data) ? data.resumes.data
-                   : Array.isArray(data.resumes)       ? data.resumes : [];
+  const resumeList = Array.isArray(data.resumes?.data)    ? data.resumes.data
+                   : Array.isArray(data.resumes?.content) ? data.resumes.content
+                   : Array.isArray(data.resumes)           ? data.resumes
+                   : [];
 
   return (
     <div className={`cd-panel-overlay${dark ? "" : " cd-light"}`} onClick={(e) => e.target === e.currentTarget && onClose()}>
@@ -436,33 +439,120 @@ function UserDetailPanel({ user, onClose, dark }) {
                   )}
                 </div>
               )}
-              {tab === "languages" && (
-                <div className="cd-panel-section">
-                  {languages.length === 0
-                    ? <div className="cd-empty">No language experience added yet.</div>
-                    : languages.map((l, i) => (
-                      <div className="cd-item-card" key={l.id || i}>
-                        <div className="cd-item-row" style={{ alignItems: "center", gap: 10 }}>
-                          <span className="cd-item-serial">{i + 1}.</span>
-                          <span className="cd-item-title" style={{ flex: 1 }}>
-                            {l.language || l.name || "—"}
-                          </span>
-                          {l.experience && (
-                            <span style={{
-                              padding: "3px 10px", borderRadius: 999,
-                              fontSize: 11.5, fontWeight: 700,
-                              background: "rgba(6,182,212,0.08)",
-                              border: "1px solid rgba(6,182,212,0.25)",
-                              color: "#67e8f9", flexShrink: 0,
-                            }}>
-                              {l.experience}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              )}
+{tab === "languages" && (
+  <div className="cd-panel-section">
+    {languages.length === 0
+      ? <div className="cd-empty">No language experience added yet.</div>
+      : languages.map((l, i) => (
+        <div className="cd-item-card" key={l.id || i}>
+          <div className="cd-item-row" style={{ alignItems: "center", gap: 10 }}>
+            <span className="cd-item-serial">{i + 1}.</span>
+            <span className="cd-item-title" style={{ flex: 1 }}>
+              {l.language || l.name || "—"}
+            </span>
+            {l.experience && (
+              <span style={{
+                padding: "3px 10px", borderRadius: 999,
+                fontSize: 11.5, fontWeight: 700,
+                background: "rgba(6,182,212,0.08)",
+                border: "1px solid rgba(6,182,212,0.25)",
+                color: "#67e8f9", flexShrink: 0,
+              }}>
+                {l.experience}
+              </span>
+            )}
+            <button
+              className="cd-pdf-action-btn"
+              title="View Details"
+              style={{ marginLeft: 4, flexShrink: 0 }}
+              onClick={() => setLangModal(l)}
+            >{Icon.eye}</button>
+          </div>
+        </div>
+      ))}
+
+    {/* Language Detail Modal */}
+    {langModal && (
+      <div
+        style={{
+          position: "fixed", inset: 0, zIndex: 500,
+          background: "rgba(5,7,20,0.82)",
+          backdropFilter: "blur(10px)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          padding: 24,
+          animation: "cd-fade-in 0.18s ease",
+        }}
+        onClick={(e) => e.target === e.currentTarget && setLangModal(null)}
+      >
+        <div style={{
+          width: "100%", maxWidth: 460,
+          background: dark ? "#0d0f28" : "#ffffff",
+          border: "1px solid rgba(6,182,212,0.3)",
+          borderRadius: 20,
+          overflow: "hidden",
+          animation: "cd-modal-in 0.26s cubic-bezier(0.22,1,0.36,1)",
+          boxShadow: "0 28px 70px rgba(0,0,0,0.45)",
+        }}>
+          {/* Header */}
+          <div style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            padding: "14px 18px",
+            borderBottom: "1px solid rgba(6,182,212,0.18)",
+            background: dark ? "rgba(13,15,40,0.95)" : "rgba(245,255,255,0.95)",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ color: "#22d3ee" }}>{Icon.globe}</span>
+              <span style={{ fontWeight: 800, fontSize: 14, color: dark ? "#e2e8f0" : "#1e293b" }}>
+                {langModal.language || langModal.name || "Language"}
+              </span>
+            </div>
+            <button
+              onClick={() => setLangModal(null)}
+              style={{
+                width: 28, height: 28, borderRadius: 7,
+                background: "rgba(6,182,212,0.08)",
+                border: "1px solid rgba(6,182,212,0.18)",
+                color: dark ? "rgba(103,232,249,0.7)" : "#0891b2",
+                display: "grid", placeItems: "center", cursor: "pointer",
+              }}
+            >{Icon.close}</button>
+          </div>
+
+          {/* Body */}
+          <div style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
+            {[
+              ["Language",   langModal.language || langModal.name],
+              ["Experience", langModal.experience],
+            ].filter(([, v]) => v).map(([label, val]) => (
+              <div key={label} style={{
+                display: "flex", flexDirection: "column", gap: 4,
+                padding: "10px 13px", borderRadius: 10,
+                background: dark ? "rgba(6,182,212,0.04)" : "rgba(6,182,212,0.03)",
+                border: "1px solid rgba(6,182,212,0.12)",
+              }}>
+                <span style={{
+                  fontSize: 10.5, fontWeight: 700,
+                  color: dark ? "rgba(103,232,249,0.55)" : "#94a3b8",
+                  textTransform: "uppercase", letterSpacing: "0.08em",
+                }}>{label}</span>
+                <span style={{
+                  fontSize: 13, fontWeight: 600,
+                  color: dark ? "rgba(226,232,240,0.88)" : "#334155",
+                  lineHeight: 1.6,
+                }}>{String(val)}</span>
+              </div>
+            ))}
+            {!langModal.experience && !(langModal.language || langModal.name) && (
+              <div style={{ textAlign: "center", color: "var(--cd-text-muted)", fontSize: 13, padding: "16px 0" }}>
+                No additional details available.
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
+)}
               {tab === "education" && (
                 <div className="cd-panel-section">
                   {education.length === 0 ? <div className="cd-empty">No education added yet.</div>
@@ -561,7 +651,7 @@ function UserDetailPanel({ user, onClose, dark }) {
                       )}
                       {r.id && (
                         <a
-                          href={`${API_BASE}/u/${username}/resume/view/${r.id}`}
+                          href={`${API_BASE}/u/${username}/resume/view/${r.id}?t=${Date.now()}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="cd-pdf-action-btn"

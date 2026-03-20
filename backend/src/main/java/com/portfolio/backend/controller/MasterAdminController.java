@@ -4,8 +4,10 @@ package com.portfolio.backend.controller;
 
 import com.portfolio.backend.dto.MasterAdminLoginRequest;
 import com.portfolio.backend.model.PreviewPdf;
+import com.portfolio.backend.model.ResumeFile;
 import com.portfolio.backend.model.User;
 import com.portfolio.backend.repository.PreviewPdfRepository;
+import com.portfolio.backend.repository.ResumeFileRepository;
 import com.portfolio.backend.repository.UserRepository;
 import com.portfolio.backend.service.MasterAdminService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +34,9 @@ public class MasterAdminController {
 
     @Autowired
     private PreviewPdfRepository previewPdfRepository;
+
+    @Autowired
+    private ResumeFileRepository resumeFileRepository;
 
     // ─────────────────────────────────────────────────────────────────────────
     // POST /api/master-admin/login
@@ -66,7 +71,6 @@ public class MasterAdminController {
     // ─────────────────────────────────────────────────────────────────────────
     // GET /api/master-admin/users
     // Returns all registered users — safe fields only, no passwords.
-    // Premium tiers read from DB (hasPremium1 / hasPremium2 columns).
     // ─────────────────────────────────────────────────────────────────────────
     @GetMapping("/users")
     public ResponseEntity<?> getAllUsers(
@@ -84,13 +88,13 @@ public class MasterAdminController {
                 Map<String, Object> dto = new LinkedHashMap<>();
                 dto.put("id",          u.getId());
                 dto.put("username",    u.getUsername());
-                dto.put("email",       u.getEmail());       // nullable — added in updated User.java
+                dto.put("email",       u.getEmail());
                 dto.put("role",        u.getRole());
-                dto.put("enabled",     u.isEnabled());      // added in updated User.java
+                dto.put("enabled",     u.isEnabled());
                 dto.put("hasPremium1", u.isHasPremium1());
                 dto.put("hasPremium2", u.isHasPremium2());
-                dto.put("createdAt",   u.getCreatedAt());   // added in updated User.java
-                dto.put("lastLogin",   u.getLastLogin());   // added in updated User.java
+                dto.put("createdAt",   u.getCreatedAt());
+                dto.put("lastLogin",   u.getLastLogin());
                 return dto;
             }).collect(Collectors.toList());
 
@@ -103,8 +107,42 @@ public class MasterAdminController {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+    // GET /api/master-admin/users/{username}/resumes
+    // Returns resume list for a specific user — controller token only.
+    // PUBLIC in SecurityConfig so the Bearer token reaches this method check.
+    // ─────────────────────────────────────────────────────────────────────────
+    @GetMapping("/users/{username}/resumes")
+    public ResponseEntity<?> getUserResumes(
+            @PathVariable String username,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Missing token"));
+        }
+
+        try {
+            List<ResumeFile> resumes = resumeFileRepository
+                    .findAllByOwnerUsernameOrderByUploadedAtDesc(username);
+
+            List<Map<String, Object>> result = resumes.stream().map(r -> {
+                Map<String, Object> dto = new LinkedHashMap<>();
+                dto.put("id",         r.getId());
+                dto.put("fileName",   r.getFilename());
+                dto.put("uploadedAt", r.getUploadedAt() != null ? r.getUploadedAt().toString() : null);
+                dto.put("primary",    r.isPrimaryResume());
+                return dto;
+            }).collect(Collectors.toList());
+
+            return ResponseEntity.ok(result);
+
+        } catch (Exception e) {
+            return ResponseEntity.ok(List.of());
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // GET /api/master-admin/preview-pdfs
-    // Returns metadata (NO binary bytes) for both tier PDFs.
     // ─────────────────────────────────────────────────────────────────────────
     @GetMapping("/preview-pdfs")
     public ResponseEntity<?> getPreviewPdfs(
@@ -139,7 +177,6 @@ public class MasterAdminController {
 
     // ─────────────────────────────────────────────────────────────────────────
     // POST /api/master-admin/preview-pdfs/upload
-    // Upserts the preview PDF for a tier (replaces existing row if present).
     // ─────────────────────────────────────────────────────────────────────────
     @PostMapping("/preview-pdfs/upload")
     @Transactional
@@ -165,7 +202,6 @@ public class MasterAdminController {
         }
 
         try {
-            // Upsert: reuse existing row for tier if present, else create new
             PreviewPdf pdf = previewPdfRepository.findByTier(tier).orElse(new PreviewPdf());
             pdf.setTier(tier);
             pdf.setFileName(file.getOriginalFilename() != null
@@ -190,7 +226,7 @@ public class MasterAdminController {
 
     // ─────────────────────────────────────────────────────────────────────────
     // GET /api/master-admin/preview-pdfs/{id}/view
-    // Streams PDF bytes inline. PUBLIC — no token (used in <iframe>).
+    // PUBLIC — streams PDF bytes inline for iframe use.
     // ─────────────────────────────────────────────────────────────────────────
     @GetMapping("/preview-pdfs/{id}/view")
     public ResponseEntity<byte[]> viewPreviewPdfById(@PathVariable Long id) {
@@ -206,8 +242,7 @@ public class MasterAdminController {
 
     // ─────────────────────────────────────────────────────────────────────────
     // GET /api/master-admin/preview-pdfs/latest/{tier}
-    // Returns metadata for the active PDF of a tier.
-    // PUBLIC — used by VersionPickerModal (no token needed).
+    // PUBLIC — used by VersionPickerModal.
     // ─────────────────────────────────────────────────────────────────────────
     @GetMapping("/preview-pdfs/latest/{tier}")
     public ResponseEntity<?> getLatestPreviewPdf(@PathVariable String tier) {
@@ -218,7 +253,6 @@ public class MasterAdminController {
 
     // ─────────────────────────────────────────────────────────────────────────
     // DELETE /api/master-admin/preview-pdfs/{id}
-    // Deletes by numeric DB ID (used by dashboard delete button).
     // ─────────────────────────────────────────────────────────────────────────
     @DeleteMapping("/preview-pdfs/{id}")
     @Transactional
