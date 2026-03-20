@@ -39,7 +39,7 @@ import http from "../api/http";
 const API_BASE = (
   import.meta.env.VITE_API_BASE ||
   import.meta.env.VITE_API_URL  ||
-  "https://db-driven-portfolio-generator-multiuser-pq34.onrender.com/api"
+  "https://db-driven-portfolio-generator.onrender.com/api"
 );
 
 function safe(v) { return v == null ? "" : String(v); }

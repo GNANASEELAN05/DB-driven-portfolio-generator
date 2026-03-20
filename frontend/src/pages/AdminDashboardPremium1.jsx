@@ -1760,7 +1760,7 @@ React.useEffect(() => { return () => { clearPortfolioLoadingTimer(); }; }, []);
                         src={
                           /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)
                             ? `https://docs.google.com/viewer?url=${encodeURIComponent(
-                                `${(import.meta.env.VITE_API_URL || "https://db-driven-portfolio-generator-multiuser-pq34.onrender.com/api")}/portfolio/achievements/${certPreviewAchId}/certificate`
+                                `${(import.meta.env.VITE_API_URL || "https://db-driven-portfolio-generator.onrender.com/api")}/portfolio/achievements/${certPreviewAchId}/certificate`
                               )}&embedded=true`
                             : `${certPreviewSrc}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`
                         }

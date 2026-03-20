@@ -1128,7 +1128,7 @@ React.useEffect(() => {
     try {
       const token = localStorage.getItem("token");
       const res = await fetch(
-        `${import.meta.env.VITE_API_URL || "https://db-driven-portfolio-generator-multiuser-pq34.onrender.com/api"}/payment-requests/status?username=${encodeURIComponent(authUser)}`,
+        `${import.meta.env.VITE_API_URL || "https://db-driven-portfolio-generator.onrender.com/api"}/payment-requests/status?username=${encodeURIComponent(authUser)}`,
         { headers: token ? { Authorization: `Bearer ${token}` } : {} }
       );
       if (res.ok) {

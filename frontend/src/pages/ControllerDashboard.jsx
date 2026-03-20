@@ -6,7 +6,7 @@ import "./ControllerDashboard.css";
 
 const API_BASE =
   import.meta.env.VITE_API_URL ||
-  "https://db-driven-portfolio-generator-multiuser-pq34.onrender.com/api";
+  "https://db-driven-portfolio-generator.onrender.com/api";
 
 const BACKEND_BASE = API_BASE.replace(/\/api\/?$/, "");
 
@@ -1365,7 +1365,7 @@ function PdfUploadPage({ dark }) {
 function UpiQrPage({ dark }) {
   const API_BASE_LOCAL = (
     (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) ||
-    "https://db-driven-portfolio-generator-multiuser-pq34.onrender.com/api"
+    "https://db-driven-portfolio-generator.onrender.com/api"
   );
   const [qrList, setQrList] = useState([]);
   const [uploading, setUploading] = useState({ premium1: false, premium2: false });

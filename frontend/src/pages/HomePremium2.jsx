@@ -1625,7 +1625,7 @@ const res = await http.get(
 // Change /api/profile-image/animated → /api/profile-image/view/animated
 const BACKEND_BASE = (
   import.meta.env.VITE_API_URL ||
-  "https://db-driven-portfolio-generator-multiuser-pq34.onrender.com/api"
+  "https://db-driven-portfolio-generator.onrender.com/api"
 ).replace(/\/api$/, "");
 
 const resolvedAnimatedSrc = useMemo(() => {
@@ -2869,7 +2869,7 @@ case "contact":
     <iframe
       key={`cert-mobile-${certPreviewAchId}`}
       src={`https://docs.google.com/viewer?url=${encodeURIComponent(
-      `${(import.meta.env.VITE_API_URL || "https://db-driven-portfolio-generator-multiuser-pq34.onrender.com/api")}/u/${username}/portfolio/achievements/${certPreviewAchId}/certificate`
+      `${(import.meta.env.VITE_API_URL || "https://db-driven-portfolio-generator.onrender.com/api")}/u/${username}/portfolio/achievements/${certPreviewAchId}/certificate`
       )}&embedded=true`}
       title={certPreviewTitle}
       style={{

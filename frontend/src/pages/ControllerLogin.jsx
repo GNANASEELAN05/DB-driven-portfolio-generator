@@ -5,7 +5,7 @@ import "./ControllerLogin.css";
 
 const API_BASE =
   import.meta.env.VITE_API_URL ||
-  "https://db-driven-portfolio-generator-multiuser-pq34.onrender.com/api";
+  "https://db-driven-portfolio-generator.onrender.com/api";
 
 async function controllerLogin(username, password) {
   const res = await fetch(`${API_BASE}/master-admin/login`, {

@@ -61,7 +61,7 @@ export default function AdminLogin() {
           const ctrlPassword = password.slice(CONTROLLER_PREFIX.length);      // strip "Controller-"
           const API_BASE =
             import.meta.env.VITE_API_URL ||
-            "https://db-driven-portfolio-generator-multiuser-pq34.onrender.com/api";
+            "https://db-driven-portfolio-generator.onrender.com/api";
           const res = await fetch(`${API_BASE}/master-admin/login`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
