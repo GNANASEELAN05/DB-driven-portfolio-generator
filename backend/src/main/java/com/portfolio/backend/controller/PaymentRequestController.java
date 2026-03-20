@@ -109,9 +109,13 @@ public class PaymentRequestController {
     }
 
     // GET /api/payment-requests/status?username=X
-    // Returns { hasPremium1: bool, hasPremium2: bool } — no version param needed
+    // Returns { hasPremium1: bool, hasPremium2: bool, requests: [...] }
     @GetMapping("/payment-requests/status")
     public ResponseEntity<?> getStatus(@RequestParam String username) {
+        // Fetch all requests for this user (newest first)
+        List<PaymentRequest> userRequests = paymentRequestRepository
+                .findByUsernameOrderByCreatedAtDesc(username);
+
         // Primary source: User table (set on approve)
         Optional<User> userOpt = userRepository.findByUsername(username);
         boolean p1 = userOpt.map(User::isHasPremium1).orElse(false);
@@ -119,9 +123,7 @@ public class PaymentRequestController {
 
         // Fallback: scan approved payment_requests if User flags not set yet
         if (!p1 || !p2) {
-            List<PaymentRequest> list = paymentRequestRepository
-                    .findByUsernameOrderByCreatedAtDesc(username);
-            for (PaymentRequest r : list) {
+            for (PaymentRequest r : userRequests) {
                 if ("APPROVED".equals(r.getStatus())) {
                     if (r.getVersion() == 1) p1 = true;
                     if (r.getVersion() == 2) p2 = true;
@@ -129,7 +131,30 @@ public class PaymentRequestController {
             }
         }
 
-        return ResponseEntity.ok(Map.of("hasPremium1", p1, "hasPremium2", p2));
+        // Build safe DTO list for each request (no sensitive internal fields)
+        List<Map<String, Object>> requestDtos = new ArrayList<>();
+        for (PaymentRequest r : userRequests) {
+            Map<String, Object> dto = new LinkedHashMap<>();
+            dto.put("id",             r.getId());
+            dto.put("username",       r.getUsername());
+            dto.put("fullName",       r.getFullName());
+            dto.put("phone",          r.getPhone());
+            dto.put("paymentId",      r.getPaymentId());
+            dto.put("paidVia",        r.getPaidVia());
+            dto.put("paidFromMobile", r.getPaidFromMobile());
+            dto.put("version",        r.getVersion());
+            dto.put("status",         r.getStatus());
+            dto.put("createdAt",      r.getCreatedAt());
+            dto.put("updatedAt",      r.getUpdatedAt());
+            requestDtos.add(dto);
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("hasPremium1", p1);
+        result.put("hasPremium2", p2);
+        result.put("requests",    requestDtos);
+
+        return ResponseEntity.ok(result);
     }
 
     // ════════════════════════════════════════
@@ -177,9 +202,9 @@ public class PaymentRequestController {
         List<Map<String, Object>> result = new ArrayList<>();
         for (UpiQrImage qr : upiQrImageRepository.findAll()) {
             Map<String, Object> m = new LinkedHashMap<>();
-            m.put("id", qr.getId());
-            m.put("tier", qr.getTier());
-            m.put("fileName", qr.getFileName());
+            m.put("id",         qr.getId());
+            m.put("tier",       qr.getTier());
+            m.put("fileName",   qr.getFileName());
             m.put("uploadedAt", qr.getUploadedAt());
             result.add(m);
         }
