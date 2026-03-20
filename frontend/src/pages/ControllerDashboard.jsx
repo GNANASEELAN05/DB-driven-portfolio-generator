@@ -80,6 +80,10 @@ const Icon = {
   upload: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/></svg>,
   trash: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>,
   close: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+  qr: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="7" y="7" width="3" height="3" fill="currentColor" stroke="none"/><rect x="18" y="7" width="3" height="3" fill="currentColor" stroke="none"/><rect x="7" y="18" width="3" height="3" fill="currentColor" stroke="none"/><line x1="14" y1="14" x2="14" y2="14"/><path d="M14 17h3v3M17 14h3M14 14h.01"/></svg>,
+  inbox: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></svg>,
+  check2: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>,
+  reject: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
 };
 
 // ── Stat Card ──
@@ -1355,6 +1359,394 @@ function PdfUploadPage({ dark }) {
     </div>
   );
 }
+// ════════════════════════════════════════
+// UPI QR PAGE
+// ════════════════════════════════════════
+function UpiQrPage({ dark }) {
+  const API_BASE_LOCAL = (
+    (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) ||
+    "https://db-driven-portfolio-generator-multiuser-pq34.onrender.com/api"
+  );
+  const [qrList, setQrList] = useState([]);
+  const [uploading, setUploading] = useState({ premium1: false, premium2: false });
+  const [deleting, setDeleting] = useState({});
+  const [err, setErr] = useState("");
+  const [ok, setOk] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [preview, setPreview] = useState({ open: false, tier: "", url: "" });
+
+  const fetchList = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await apiFetch("/master-admin/upi-qr");
+      if (res.ok) setQrList(await res.json());
+    } catch {}
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { fetchList(); }, [fetchList]);
+
+  const handleUpload = async (tier, file) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { setErr("Only image files are allowed (PNG/JPG/etc)."); return; }
+    setErr(""); setOk("");
+    setUploading(p => ({ ...p, [tier]: true }));
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("tier", tier);
+      const token = localStorage.getItem("controller_token");
+      const res = await fetch(`${API_BASE_LOCAL}/master-admin/upi-qr/upload`, {
+        method: "POST",
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: formData,
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setOk(`${tier === "premium1" ? "Premium 1" : "Premium 2"} QR uploaded!`);
+      await fetchList();
+    } catch (e) { setErr("Upload failed: " + e.message); }
+    finally { setUploading(p => ({ ...p, [tier]: false })); }
+  };
+
+  const handleDelete = async (tier) => {
+    if (!window.confirm(`Delete QR for ${tier}?`)) return;
+    setErr(""); setOk("");
+    setDeleting(p => ({ ...p, [tier]: true }));
+    try {
+      const res = await apiFetch(`/master-admin/upi-qr/${tier}`, { method: "DELETE" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setOk("QR deleted.");
+      await fetchList();
+    } catch (e) { setErr("Delete failed: " + e.message); }
+    finally { setDeleting(p => ({ ...p, [tier]: false })); }
+  };
+
+  const renderTier = (tier, label) => {
+    const item = qrList.find(q => q.tier === tier);
+    const isUploading = uploading[tier];
+    const accentColor = tier === "premium1" ? "#7a3f91" : "#7c3aed";
+    return (
+      <div style={{
+        borderRadius: 16, padding: "20px 22px", marginBottom: 20,
+        background: dark ? "rgba(99,102,241,0.05)" : "rgba(99,102,241,0.03)",
+        border: `1.5px solid ${accentColor}30`,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 800, fontSize: 15, color: accentColor }}>
+            {Icon.qr} {label}
+          </div>
+          <label style={{
+            display: "inline-flex", alignItems: "center", gap: 6,
+            padding: "7px 14px", borderRadius: 999, fontSize: 12.5, fontWeight: 700, cursor: "pointer",
+            background: `${accentColor}18`, border: `1px solid ${accentColor}40`, color: accentColor,
+          }}>
+            {isUploading ? <><div className="cd-loader-sm" /> Uploading…</> : <>{Icon.upload} Upload QR Image</>}
+            <input hidden type="file" accept="image/*" disabled={isUploading} onChange={e => e.target.files?.[0] && handleUpload(tier, e.target.files[0])} />
+          </label>
+        </div>
+
+        {loading ? (
+          <div className="cd-pdf-item"><span className="cd-skeleton" style={{ width: "50%" }} /></div>
+        ) : item ? (
+          <div style={{
+            display: "flex", alignItems: "center", gap: 14,
+            padding: "12px 14px", borderRadius: 10,
+            background: dark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)",
+            border: `1px solid ${accentColor}20`,
+          }}>
+            <img
+              src={`${API_BASE_LOCAL}/upi-qr/${tier}/view?t=${item.uploadedAt || Date.now()}`}
+              alt="QR Preview"
+              style={{ width: 64, height: 64, objectFit: "contain", borderRadius: 8, border: "1px solid rgba(0,0,0,0.08)", background: "#fff", padding: 4 }}
+            />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 700, fontSize: 13, color: "var(--cd-text)" }}>{item.fileName}</div>
+              <div style={{ fontSize: 11, opacity: 0.5, marginTop: 2 }}>Uploaded {item.uploadedAt ? new Date(item.uploadedAt).toLocaleDateString("en-IN") : ""}</div>
+            </div>
+            <div style={{ display: "flex", gap: 6 }}>
+              <button className="cd-pdf-action-btn" title="Preview" onClick={() => setPreview({ open: true, tier, url: `${API_BASE_LOCAL}/upi-qr/${tier}/view` })}>{Icon.eye}</button>
+              <button className="cd-pdf-action-btn cd-pdf-action-del" title="Delete" onClick={() => handleDelete(tier)} disabled={deleting[tier]}>{Icon.trash}</button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ textAlign: "center", padding: "28px 0", opacity: 0.45, fontSize: 13 }}>
+            <div style={{ marginBottom: 6, fontSize: 32 }}>🖼️</div>
+            No QR uploaded yet. Upload a QR image to show users when they click "Pay &amp; Unlock".
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="cd-page-enter">
+      {err && <div className="cd-alert cd-alert-err">{Icon.x} {err}</div>}
+      {ok  && <div className="cd-alert cd-alert-ok">{Icon.check} {ok}</div>}
+      {renderTier("premium1", "Premium 1 — UPI QR Code")}
+      {renderTier("premium2", "Premium 2 — UPI QR Code")}
+
+      {/* QR Preview Modal */}
+      {preview.open && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 600, background: "rgba(5,7,20,0.88)", backdropFilter: "blur(10px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
+          onClick={() => setPreview({ open: false, tier: "", url: "" })}>
+          <div style={{ background: dark ? "#0d0f28" : "#fff", borderRadius: 20, padding: 24, maxWidth: 380, width: "100%", border: "1px solid rgba(99,102,241,0.3)" }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <span style={{ fontWeight: 800, fontSize: 14 }}>QR Preview — {preview.tier === "premium1" ? "Premium 1" : "Premium 2"}</span>
+              <button onClick={() => setPreview({ open: false, tier: "", url: "" })} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--cd-text-muted)" }}>{Icon.close}</button>
+            </div>
+            <img src={`${preview.url}?t=${Date.now()}`} alt="QR" style={{ width: "100%", borderRadius: 12, border: "1px solid rgba(0,0,0,0.08)" }} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ════════════════════════════════════════
+// PAYMENT REQUESTS PAGE
+// ════════════════════════════════════════
+function RequestsPage({ dark }) {
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [err, setErr]           = useState("");
+  const [ok, setOk]             = useState("");
+  const [filter, setFilter]     = useState("ALL"); // ALL | PENDING | APPROVED | REJECTED
+  const [search, setSearch]     = useState("");
+  const [detail, setDetail]     = useState(null);  // request object for detail modal
+  const [acting, setActing]     = useState({});     // { [id]: "approve"|"reject" }
+
+  const fetchRequests = useCallback(async () => {
+    setLoading(true); setErr("");
+    try {
+      const res = await apiFetch("/master-admin/payment-requests");
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setRequests(Array.isArray(data) ? data : []);
+    } catch (e) { setErr("Failed to load requests."); }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { fetchRequests(); }, [fetchRequests]);
+
+  const handleApprove = async (id) => {
+    setActing(p => ({ ...p, [id]: "approve" }));
+    setErr(""); setOk("");
+    try {
+      const res = await apiFetch(`/master-admin/payment-requests/${id}/approve`, { method: "PATCH" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setOk("Request approved! Premium unlocked for user.");
+      setDetail(null);
+      await fetchRequests();
+    } catch (e) { setErr("Approve failed: " + e.message); }
+    finally { setActing(p => ({ ...p, [id]: undefined })); }
+  };
+
+  const handleReject = async (id) => {
+    if (!window.confirm("Reject this payment request?")) return;
+    setActing(p => ({ ...p, [id]: "reject" }));
+    setErr(""); setOk("");
+    try {
+      const res = await apiFetch(`/master-admin/payment-requests/${id}/reject`, { method: "PATCH" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setOk("Request rejected.");
+      setDetail(null);
+      await fetchRequests();
+    } catch (e) { setErr("Reject failed: " + e.message); }
+    finally { setActing(p => ({ ...p, [id]: undefined })); }
+  };
+
+  const statusColor = (s) => s === "APPROVED" ? "#10b981" : s === "REJECTED" ? "#f43f5e" : "#f59e0b";
+  const statusBg    = (s) => s === "APPROVED" ? "rgba(16,185,129,0.12)" : s === "REJECTED" ? "rgba(244,63,94,0.10)" : "rgba(245,158,11,0.12)";
+  const statusBorder= (s) => s === "APPROVED" ? "rgba(16,185,129,0.3)" : s === "REJECTED" ? "rgba(244,63,94,0.25)" : "rgba(245,158,11,0.3)";
+
+  const filtered = requests.filter(r => {
+    const matchFilter = filter === "ALL" || r.status === filter;
+    const matchSearch = !search ||
+      (r.username || "").toLowerCase().includes(search.toLowerCase()) ||
+      (r.fullName || "").toLowerCase().includes(search.toLowerCase()) ||
+      (r.paymentId || "").toLowerCase().includes(search.toLowerCase());
+    return matchFilter && matchSearch;
+  });
+
+  const counts = {
+    ALL: requests.length,
+    PENDING: requests.filter(r => r.status === "PENDING").length,
+    APPROVED: requests.filter(r => r.status === "APPROVED").length,
+    REJECTED: requests.filter(r => r.status === "REJECTED").length,
+  };
+
+  return (
+    <div className="cd-page-enter">
+      {err && <div className="cd-alert cd-alert-err">{Icon.x} {err}</div>}
+      {ok  && <div className="cd-alert cd-alert-ok">{Icon.check} {ok}</div>}
+
+      {/* Filter tabs */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+        {["ALL","PENDING","APPROVED","REJECTED"].map(s => (
+          <button key={s} onClick={() => setFilter(s)} style={{
+            padding: "5px 14px", borderRadius: 999, fontSize: 12.5, fontWeight: 700, cursor: "pointer",
+            background: filter === s ? (s === "ALL" ? "rgba(99,102,241,0.18)" : `${statusBg(s)}`) : "transparent",
+            border: filter === s ? `1px solid ${s === "ALL" ? "rgba(99,102,241,0.35)" : statusBorder(s)}` : "1px solid rgba(99,102,241,0.12)",
+            color: filter === s ? (s === "ALL" ? "#a5b4fc" : statusColor(s)) : "var(--cd-text-muted)",
+          }}>
+            {s} <span style={{ opacity: 0.7, fontSize: 11 }}>({counts[s]})</span>
+          </button>
+        ))}
+        <div style={{ marginLeft: "auto" }}>
+          <div className="cd-search-wrap">
+            <svg className="cd-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input className="cd-search" placeholder="Search username / name / txn…" value={search} onChange={e => setSearch(e.target.value)} />
+            {search && <button className="cd-search-clear" onClick={() => setSearch("")}>{Icon.x}</button>}
+          </div>
+        </div>
+      </div>
+
+      <div className="cd-table-wrap">
+        <table className="cd-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>User</th>
+              <th>Full Name</th>
+              <th>Version</th>
+              <th>Txn ID</th>
+              <th>Paid Via</th>
+              <th>Submitted</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? Array.from({ length: 4 }).map((_, i) => (
+              <tr key={i} className="cd-skeleton-row">{Array.from({ length: 9 }).map((_, j) => <td key={j}><span className="cd-skeleton" /></td>)}</tr>
+            )) : filtered.length === 0 ? (
+              <tr><td colSpan={9} className="cd-empty-row">No requests found.</td></tr>
+            ) : filtered.map((r, i) => (
+              <tr key={r.id || i} className="cd-row" onClick={() => setDetail(r)}>
+                <td className="cd-td-num">{i + 1}</td>
+                <td>
+                  <div className="cd-user-cell">
+                    <div className="cd-user-avatar">{(r.username || "?")[0]?.toUpperCase()}</div>
+                    <div className="cd-username">@{r.username}</div>
+                  </div>
+                </td>
+                <td style={{ fontSize: 13 }}>{r.fullName}</td>
+                <td>
+                  <span style={{
+                    padding: "2px 9px", borderRadius: 999, fontSize: 11.5, fontWeight: 800,
+                    background: r.version === 1 ? "rgba(122,63,145,0.12)" : "rgba(124,58,237,0.12)",
+                    border: r.version === 1 ? "1px solid rgba(122,63,145,0.3)" : "1px solid rgba(124,58,237,0.3)",
+                    color: r.version === 1 ? "#c084fc" : "#a78bfa",
+                  }}>P{r.version}</span>
+                </td>
+                <td style={{ fontSize: 12, fontFamily: "monospace", maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.paymentId}</td>
+                <td style={{ fontSize: 12.5 }}>{r.paidVia}</td>
+                <td className="cd-td-date">{r.createdAt ? new Date(r.createdAt).toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}</td>
+                <td>
+                  <span style={{
+                    padding: "3px 10px", borderRadius: 999, fontSize: 11.5, fontWeight: 800,
+                    background: statusBg(r.status), border: `1px solid ${statusBorder(r.status)}`, color: statusColor(r.status),
+                  }}>{r.status}</span>
+                </td>
+                <td onClick={e => e.stopPropagation()}>
+                  <div className="cd-actions">
+                    <button className="cd-action-btn" title="View Details" onClick={() => setDetail(r)}>{Icon.eye}</button>
+                    {r.status === "PENDING" && <>
+                      <button
+                        className="cd-action-btn"
+                        title="Approve"
+                        style={{ color: "#10b981", border: "1px solid rgba(16,185,129,0.3)", background: "rgba(16,185,129,0.08)" }}
+                        onClick={() => handleApprove(r.id)}
+                        disabled={!!acting[r.id]}
+                      >{acting[r.id] === "approve" ? <div className="cd-loader-sm" /> : Icon.check2}</button>
+                      <button
+                        className="cd-action-btn"
+                        title="Reject"
+                        style={{ color: "#f43f5e", border: "1px solid rgba(244,63,94,0.3)", background: "rgba(244,63,94,0.08)" }}
+                        onClick={() => handleReject(r.id)}
+                        disabled={!!acting[r.id]}
+                      >{acting[r.id] === "reject" ? <div className="cd-loader-sm" /> : Icon.reject}</button>
+                    </>}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Detail Modal */}
+      {detail && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 500, background: "rgba(5,7,20,0.85)", backdropFilter: "blur(10px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, animation: "cd-fade-in 0.18s ease" }}
+          onClick={e => e.target === e.currentTarget && setDetail(null)}>
+          <div style={{
+            width: "100%", maxWidth: 520, background: dark ? "#0d0f28" : "#ffffff",
+            border: "1px solid rgba(99,102,241,0.3)", borderRadius: 20, overflow: "hidden",
+            animation: "cd-modal-in 0.26s cubic-bezier(0.22,1,0.36,1)", boxShadow: "0 28px 70px rgba(0,0,0,0.45)",
+          }}>
+            {/* Header */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderBottom: "1px solid rgba(99,102,241,0.18)", background: dark ? "rgba(13,15,40,0.95)" : "rgba(245,245,255,0.95)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ color: "#a5b4fc" }}>{Icon.inbox}</span>
+                <span style={{ fontWeight: 800, fontSize: 14, color: dark ? "#e2e8f0" : "#1e293b" }}>Payment Request — @{detail.username}</span>
+              </div>
+              <button onClick={() => setDetail(null)} style={{ width: 28, height: 28, borderRadius: 7, background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.18)", color: dark ? "rgba(165,180,252,0.7)" : "#6366f1", display: "grid", placeItems: "center", cursor: "pointer" }}>{Icon.close}</button>
+            </div>
+            {/* Body */}
+            <div style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: 10, maxHeight: "70vh", overflowY: "auto" }}>
+              <div style={{
+                display: "inline-flex", alignSelf: "flex-start", padding: "3px 12px", borderRadius: 999,
+                fontSize: 12, fontWeight: 800, background: statusBg(detail.status),
+                border: `1px solid ${statusBorder(detail.status)}`, color: statusColor(detail.status),
+              }}>{detail.status}</div>
+              {[
+                ["Username",        `@${detail.username}`],
+                ["Full Name",       detail.fullName],
+                ["Phone",           detail.phone],
+                ["Transaction ID",  detail.paymentId],
+                ["Paid Via",        detail.paidVia],
+                ["Paid From Mobile",detail.paidFromMobile],
+                ["Premium Version", `Premium ${detail.version}`],
+                ["Submitted At",    detail.createdAt ? new Date(detail.createdAt).toLocaleString("en-IN") : "—"],
+                ...(detail.updatedAt ? [["Last Updated", new Date(detail.updatedAt).toLocaleString("en-IN")]] : []),
+              ].map(([label, val]) => (
+                <div key={label} style={{ display: "flex", flexDirection: "column", gap: 3, padding: "9px 12px", borderRadius: 9, background: dark ? "rgba(99,102,241,0.04)" : "rgba(99,102,241,0.03)", border: "1px solid rgba(99,102,241,0.1)" }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: dark ? "rgba(165,180,252,0.5)" : "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em" }}>{label}</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: dark ? "rgba(226,232,240,0.88)" : "#334155", fontFamily: label === "Transaction ID" ? "monospace" : "inherit" }}>{val}</span>
+                </div>
+              ))}
+              {/* Accept / Reject buttons in modal */}
+              {detail.status === "PENDING" && (
+                <div style={{ display: "flex", gap: 10, marginTop: 6 }}>
+                  <button
+                    style={{ flex: 1, padding: "9px 0", borderRadius: 10, fontWeight: 800, fontSize: 13, cursor: "pointer", background: "rgba(16,185,129,0.12)", border: "1px solid rgba(16,185,129,0.3)", color: "#10b981", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+                    onClick={() => handleApprove(detail.id)}
+                    disabled={!!acting[detail.id]}
+                  >{acting[detail.id] === "approve" ? <div className="cd-loader-sm" /> : Icon.check2} Approve &amp; Unlock</button>
+                  <button
+                    style={{ flex: 1, padding: "9px 0", borderRadius: 10, fontWeight: 800, fontSize: 13, cursor: "pointer", background: "rgba(244,63,94,0.08)", border: "1px solid rgba(244,63,94,0.25)", color: "#f43f5e", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+                    onClick={() => handleReject(detail.id)}
+                    disabled={!!acting[detail.id]}
+                  >{acting[detail.id] === "reject" ? <div className="cd-loader-sm" /> : Icon.reject} Reject</button>
+                </div>
+              )}
+              {detail.status === "REJECTED" && (
+                <div style={{ padding: "10px 12px", borderRadius: 9, background: "rgba(244,63,94,0.06)", border: "1px solid rgba(244,63,94,0.2)", color: "#f43f5e", fontSize: 13, fontWeight: 600 }}>
+                  ❌ This request was rejected. The user will see "Rejected — Try Again" in their portal.
+                </div>
+              )}
+              {detail.status === "APPROVED" && (
+                <div style={{ padding: "10px 12px", borderRadius: 9, background: "rgba(16,185,129,0.06)", border: "1px solid rgba(16,185,129,0.2)", color: "#10b981", fontSize: 13, fontWeight: 600 }}>
+                  ✅ Approved — Premium {detail.version} has been unlocked for this user.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ════════════════════════════════════════════
 // MAIN DASHBOARD
@@ -1383,6 +1775,7 @@ export default function ControllerDashboard() {
   const [search, setSearch] = useState("");
   const [selectedUser, setSelectedUser] = useState(null);
   const [lastRefresh, setLastRefresh] = useState(null);
+  const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
     document.title = "Controller Dashboard";
@@ -1408,6 +1801,15 @@ export default function ControllerDashboard() {
       const arr = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : []);
       setUsers(arr);
       setLastRefresh(new Date());
+      // Fetch pending request count for badge
+      try {
+        const rr = await apiFetch("/master-admin/payment-requests");
+        if (rr.ok) {
+          const rdata = await rr.json();
+          const arr2 = Array.isArray(rdata) ? rdata : [];
+          setPendingCount(arr2.filter(r => r.status === "PENDING").length);
+        }
+      } catch {}
     } catch (e) {
       setErr("Failed to load users. Backend may be down.");
     } finally {
@@ -1436,13 +1838,15 @@ export default function ControllerDashboard() {
   }).length;
 
   // ── Nav items ──
-  const navItems = [
+const navItems = [
     { id: "dashboard", label: "Dashboard", icon: Icon.dashboard },
     { id: "users", label: "Users", icon: Icon.users },
     { id: "pdfs", label: "Preview PDFs", icon: Icon.pdf },
+    { id: "upi", label: "UPI QR Codes", icon: Icon.qr },
+    { id: "requests", label: "Pay Requests", icon: Icon.inbox },
   ];
 
-  const pageLabel = { dashboard: "Overview", users: "Registered Users", pdfs: "Preview PDFs" };
+const pageLabel = { dashboard: "Overview", users: "Registered Users", pdfs: "Preview PDFs", upi: "UPI QR Codes", requests: "Payment Requests" };
 
   return (
     <div className={`cd-root${dark ? "" : " cd-light"}`}>
@@ -1479,6 +1883,11 @@ export default function ControllerDashboard() {
             >
               <span className="cd-nav-icon">{item.icon}</span>
               <span className="cd-nav-label">{item.label}</span>
+              {item.id === "requests" && pendingCount > 0 && (
+                <span style={{ marginLeft: "auto", padding: "1px 7px", borderRadius: 999, fontSize: 10.5, fontWeight: 800, background: "rgba(245,158,11,0.18)", border: "1px solid rgba(245,158,11,0.35)", color: "#fbbf24" }}>
+                  {pendingCount}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -1673,6 +2082,12 @@ export default function ControllerDashboard() {
 
           {/* ── PDF UPLOAD PAGE ── */}
           {activePage === "pdfs" && <PdfUploadPage dark={dark} />}
+
+          {/* ── UPI QR PAGE ── */}
+          {activePage === "upi" && <UpiQrPage dark={dark} />}
+
+          {/* ── PAYMENT REQUESTS PAGE ── */}
+          {activePage === "requests" && <RequestsPage dark={dark} />}
         </main>
       </div>
 

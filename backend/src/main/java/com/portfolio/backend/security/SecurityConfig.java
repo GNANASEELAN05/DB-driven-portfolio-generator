@@ -59,7 +59,14 @@ public class SecurityConfig {
                 // ── CONTROLLER: user resume list ───────────────────────────
                 .requestMatchers(HttpMethod.GET, "/api/master-admin/users/*/resumes").permitAll()
 
-                // ── payment ────────────────────────────────────────────────
+                // ── PUBLIC: UPI QR image view ──────────────────────────────
+                .requestMatchers(HttpMethod.GET, "/api/upi-qr/*/view").permitAll()
+
+                // ── PUBLIC: payment request submit + status poll ───────────
+                .requestMatchers(HttpMethod.POST, "/api/payment-requests").permitAll()
+                .requestMatchers(HttpMethod.GET,  "/api/payment-requests/status").permitAll()
+
+                // ── payment (Razorpay) ─────────────────────────────────────
                 .requestMatchers("/api/payment/**").authenticated()
 
                 // ── PUBLIC: portfolio viewer GETs ──────────────────────────

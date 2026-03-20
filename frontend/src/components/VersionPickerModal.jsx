@@ -1,35 +1,29 @@
 // frontend/src/components/VersionPickerModal.jsx
-// ─────────────────────────────────────────────────────────────────────────────
-// Drop-in modal shown when "Generate Portfolio" is clicked.
-// Shows three plan cards: Free · Premium 1 (₹50) · Premium 2 (₹100)
-// Handles Razorpay payment inline and unlocks the version on success.
-// Includes ⚡ Skip (Test) button for dev/testing — bypasses Razorpay.
-// Preview PDFs are fetched dynamically from the Controller backend.
-// ─────────────────────────────────────────────────────────────────────────────
-
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Dialog, DialogContent, Box, Typography, Button,
   Chip, CircularProgress, Alert, IconButton, Tooltip,
+  TextField, MenuItem, Select, InputLabel, FormControl,
 } from "@mui/material";
-import { MdClose, MdVisibility, MdLock, MdCheckCircle, MdStar } from "react-icons/md";
-import { startPremiumPayment } from "../api/payment";
+import {
+  MdClose, MdVisibility, MdLock, MdCheckCircle, MdStar,
+  MdArrowBack, MdQrCode2, MdSend,
+} from "react-icons/md";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Backend base URL — update VITE_API_URL in your .env to override
-// ─────────────────────────────────────────────────────────────────────────────
 const BACKEND_BASE = (
   import.meta.env.VITE_API_URL ||
   "https://db-driven-portfolio-generator-multiuser-pq34.onrender.com/api"
 ).replace(/\/api\/?$/, "");
-
 const API_BASE = `${BACKEND_BASE}/api`;
-
-// ─────────────────────────────────────────────────────────────────────────────
 
 const BRAND  = "#7a3f91";
 const GOLD   = "#f59e0b";
 const VIOLET = "#7c3aed";
+
+// ── Step constants ──────────────────────────────────────────────────────────
+const STEP_PICKER   = "picker";   // main plan cards
+const STEP_QR       = "qr";       // UPI QR + pay options
+const STEP_FORM     = "form";     // "I've Paid" form
 
 export default function VersionPickerModal({
   open,
@@ -37,396 +31,417 @@ export default function VersionPickerModal({
   hasPremium1,
   hasPremium2,
   username,
-  onPremiumUnlocked,   // (newStatus) => void  — called after successful payment OR skip
-  onGenerateFree,      // () => void
-  onGeneratePremium1,  // () => void
-  onGeneratePremium2,  // () => void
-  onSkip,              // (version: 1|2) => void  — called after skip-unlock succeeds
+  onPremiumUnlocked,
+  onGenerateFree,
+  onGeneratePremium1,
+  onGeneratePremium2,
 }) {
-  const [paying,   setPaying]   = useState(null); // 1 | 2 | null
-  const [skipping, setSkipping] = useState(null); // 1 | 2 | null
-  const [payErr,   setPayErr]   = useState("");
-  const [payOk,    setPayOk]    = useState("");
-  const [pdfUrl,   setPdfUrl]   = useState(null); // null = closed
+  const [step, setStep]       = useState(STEP_PICKER);
+  const [activeVersion, setActiveVersion] = useState(null); // 1 | 2
+  const [payErr, setPayErr]   = useState("");
+  const [payOk, setPayOk]     = useState("");
+  const [pdfUrl, setPdfUrl]   = useState(null);
 
-  // ── Dynamic PDF preview URLs fetched from the Controller backend ───────────
-  const [previewPdfUrls, setPreviewPdfUrls] = useState({
-    premium1: null,
-    premium2: null,
+  // ── Preview PDF URLs ────────────────────────────────────────────────────
+  const [previewPdfUrls, setPreviewPdfUrls] = useState({ premium1: null, premium2: null });
+
+  // ── UPI QR image URLs ───────────────────────────────────────────────────
+  const [qrUrls, setQrUrls] = useState({ premium1: null, premium2: null });
+
+  // ── "I've Paid" form state ──────────────────────────────────────────────
+  const [form, setForm] = useState({
+    fullName: "",
+    phone: "",
+    paymentId: "",
+    paidVia: "",
+    paidFromMobile: "",
   });
+  const [formErr, setFormErr]       = useState("");
+  const [formSubmitting, setFormSubmitting] = useState(false);
+  const [formDone, setFormDone]     = useState(false);
 
+  // ── Fetch preview PDFs + QR URLs on open ───────────────────────────────
   useEffect(() => {
     if (!open) return;
 
     const fetchPreviews = async () => {
       try {
         const [r1, r2] = await Promise.allSettled([
-          fetch(`${API_BASE}/master-admin/preview-pdfs/latest/premium1`)
-            .then(r => r.ok ? r.json() : null),
-          fetch(`${API_BASE}/master-admin/preview-pdfs/latest/premium2`)
-            .then(r => r.ok ? r.json() : null),
+          fetch(`${API_BASE}/master-admin/preview-pdfs/latest/premium1`).then(r => r.ok ? r.json() : null),
+          fetch(`${API_BASE}/master-admin/preview-pdfs/latest/premium2`).then(r => r.ok ? r.json() : null),
         ]);
-
         setPreviewPdfUrls({
-          premium1: r1.status === "fulfilled" && r1.value?.id
-            ? `${API_BASE}/master-admin/preview-pdfs/${r1.value.id}/view`
-            : null,
-          premium2: r2.status === "fulfilled" && r2.value?.id
-            ? `${API_BASE}/master-admin/preview-pdfs/${r2.value.id}/view`
-            : null,
+          premium1: r1.status === "fulfilled" && r1.value?.id ? `${API_BASE}/master-admin/preview-pdfs/${r1.value.id}/view` : null,
+          premium2: r2.status === "fulfilled" && r2.value?.id ? `${API_BASE}/master-admin/preview-pdfs/${r2.value.id}/view` : null,
         });
-      } catch {
-        // Network error — leave both null, eye icons simply won't show
-      }
+      } catch { /* leave null */ }
+    };
+
+    const checkQr = async () => {
+      try {
+        const [q1, q2] = await Promise.allSettled([
+          fetch(`${API_BASE}/upi-qr/premium1/view`, { method: "HEAD" }),
+          fetch(`${API_BASE}/upi-qr/premium2/view`, { method: "HEAD" }),
+        ]);
+        setQrUrls({
+          premium1: q1.status === "fulfilled" && q1.value?.ok ? `${API_BASE}/upi-qr/premium1/view` : null,
+          premium2: q2.status === "fulfilled" && q2.value?.ok ? `${API_BASE}/upi-qr/premium2/view` : null,
+        });
+      } catch { /* leave null */ }
     };
 
     fetchPreviews();
+    checkQr();
   }, [open]);
 
-  // ── Razorpay payment ───────────────────────────────────────────────────────
-  const handlePay = (version) => {
+  // ── Reset to picker when modal closes ──────────────────────────────────
+  useEffect(() => {
+    if (!open) {
+      setTimeout(() => {
+        setStep(STEP_PICKER);
+        setActiveVersion(null);
+        setPayErr("");
+        setPayOk("");
+        setFormDone(false);
+        setForm({ fullName: "", phone: "", paymentId: "", paidVia: "", paidFromMobile: "" });
+        setFormErr("");
+      }, 300);
+    }
+  }, [open]);
+
+  // ── Open UPI QR step ────────────────────────────────────────────────────
+  const handlePayAndUnlock = (version) => {
+    setActiveVersion(version);
     setPayErr("");
     setPayOk("");
-    setPaying(version);
-
-    startPremiumPayment({
-      version,
-      username,
-      onSuccess: (newStatus) => {
-        setPaying(null);
-        setPayOk(`🎉 Premium ${version} unlocked! Enjoy your new layout.`);
-        onPremiumUnlocked(newStatus);
-      },
-      onError: (msg) => {
-        setPaying(null);
-        if (msg === "Payment cancelled") return;
-        setPayErr(String(msg));
-      },
-    });
+    setFormDone(false);
+    setForm({ fullName: "", phone: "", paymentId: "", paidVia: `premium${version}`, paidFromMobile: "" });
+    setFormErr("");
+    setStep(STEP_QR);
   };
 
-  // ── Skip (test) — calls /api/payment/skip-unlock, no Razorpay ─────────────
-  const handleSkip = async (version) => {
-    setPayErr("");
-    setPayOk("");
-    setSkipping(version);
-
+  // ── Submit "I've Paid" form ─────────────────────────────────────────────
+  const handleFormSubmit = async () => {
+    const { fullName, phone, paymentId, paidVia, paidFromMobile } = form;
+    if (!fullName.trim() || !phone.trim() || !paymentId.trim() || !paidVia.trim() || !paidFromMobile.trim()) {
+      setFormErr("All fields are required.");
+      return;
+    }
+    setFormErr("");
+    setFormSubmitting(true);
     try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(`${API_BASE}/payment/skip-unlock`, {
+      const res = await fetch(`${API_BASE}/payment-requests`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ version }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username,
+          fullName: fullName.trim(),
+          phone: phone.trim(),
+          paymentId: paymentId.trim(),
+          paidVia: paidVia.trim(),
+          paidFromMobile: paidFromMobile.trim(),
+          version: activeVersion,
+        }),
       });
-
-      if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(errText || `HTTP ${res.status}`);
-      }
-
-      const newStatus = await res.json();
-      setPayOk(`✅ Test skip — Premium ${version} unlocked.`);
-      onPremiumUnlocked(newStatus);
-      if (onSkip) onSkip(version);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setFormDone(true);
     } catch (e) {
-      setPayErr("Skip failed: " + e.message);
+      setFormErr("Submission failed: " + e.message);
     } finally {
-      setSkipping(null);
+      setFormSubmitting(false);
     }
   };
 
-  // ─────────────────────────────────────────────────────────────────────────
+  // ── Plans config ────────────────────────────────────────────────────────
   const plans = [
     {
-      key: "free",
-      label: "Free",
-      price: "₹0",
-      color: "#16a34a",
+      key: "free", label: "Free", price: "₹0", color: "#16a34a",
       features: ["Basic layout", "All your data", "Public URL"],
-      locked: false,
-      paid: true,
-      onGenerate: onGenerateFree,
-      previewPdf: null,
+      locked: false, paid: true,
+      onGenerate: onGenerateFree, previewPdf: null,
     },
     {
-      key: "premium1",
-      label: "Premium 1",
-      price: "₹50",
-      color: BRAND,
+      key: "premium1", label: "Premium 1", price: "₹50", color: BRAND,
       version: 1,
-      features: [
-        "Luxury card design",
-        "Animated sections",
-        "Holographic effects",
-        "Priority layout",
-      ],
-      locked: !hasPremium1,
-      paid: hasPremium1,
-      onGenerate: onGeneratePremium1,
-      previewPdf: previewPdfUrls.premium1,
+      features: ["Luxury card design", "Animated sections", "Holographic effects", "Priority layout"],
+      locked: !hasPremium1, paid: hasPremium1,
+      onGenerate: onGeneratePremium1, previewPdf: previewPdfUrls.premium1,
     },
     {
-      key: "premium2",
-      label: "Premium 2",
-      price: "₹100",
-      color: VIOLET,
+      key: "premium2", label: "Premium 2", price: "₹100", color: VIOLET,
       version: 2,
-      features: [
-        "All Premium 1 features",
-        "3D animations",
-        "Custom theme",
-        "Coming soon…",
-      ],
-      locked: !hasPremium2,
-      paid: hasPremium2,
-      onGenerate: onGeneratePremium2,
-      previewPdf: previewPdfUrls.premium2,
+      features: ["All Premium 1 features", "3D animations", "Custom theme", "Coming soon…"],
+      locked: !hasPremium2, paid: hasPremium2,
+      onGenerate: onGeneratePremium2, previewPdf: previewPdfUrls.premium2,
     },
   ];
 
-  const busy = paying !== null || skipping !== null;
-
-  // ── PDF iframe: mobile uses Google Docs viewer, desktop uses inline ────────
   const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
-  const getPdfSrc = (url) => {
-    if (!url) return "";
-    return isMobile
-      ? `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`
-      : `${url}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`;
-  };
+  const getPdfSrc = (url) => !url ? "" : isMobile
+    ? `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`
+    : `${url}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`;
 
+  const activePlan = plans.find(p => p.version === activeVersion);
+
+  // ════════════════════════════════════════════════════════════════════════
   return (
     <>
-      {/* ── PDF preview dialog ─────────────────────────────────────────────── */}
+      {/* PDF preview dialog */}
       <Dialog open={!!pdfUrl} onClose={() => setPdfUrl(null)} maxWidth="md" fullWidth>
         <Box sx={{ display: "flex", justifyContent: "flex-end", p: 1 }}>
-          <IconButton onClick={() => setPdfUrl(null)}>
-            <MdClose />
-          </IconButton>
+          <IconButton onClick={() => setPdfUrl(null)}><MdClose /></IconButton>
         </Box>
         <DialogContent sx={{ p: 0, height: "80vh" }}>
-          {pdfUrl && (
-            <iframe
-              src={getPdfSrc(pdfUrl)}
-              style={{ width: "100%", height: "100%", border: "none" }}
-              title="Portfolio Preview"
-            />
-          )}
+          {pdfUrl && <iframe src={getPdfSrc(pdfUrl)} style={{ width: "100%", height: "100%", border: "none" }} title="Portfolio Preview" />}
         </DialogContent>
       </Dialog>
 
-      {/* ── Version Picker ─────────────────────────────────────────────────── */}
-      <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            px: 3,
-            pt: 2.5,
-            pb: 1,
-          }}
-        >
-          <Typography variant="h6" sx={{ fontWeight: 900 }}>
-            Choose Your Portfolio Version
-          </Typography>
-          <IconButton onClick={onClose}>
-            <MdClose />
-          </IconButton>
+      {/* Main modal */}
+      <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 3, overflow: "hidden" } }}>
+
+        {/* ── Header ───────────────────────────────────────────────────── */}
+        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", px: 3, pt: 2.5, pb: 1 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            {step !== STEP_PICKER && (
+              <IconButton size="small" onClick={() => setStep(step === STEP_FORM ? STEP_QR : STEP_PICKER)} sx={{ mr: 0.5 }}>
+                <MdArrowBack />
+              </IconButton>
+            )}
+            <Typography variant="h6" sx={{ fontWeight: 900 }}>
+              {step === STEP_PICKER && "Choose Your Portfolio Version"}
+              {step === STEP_QR && `Pay for Premium ${activeVersion}`}
+              {step === STEP_FORM && "Payment Confirmation"}
+            </Typography>
+          </Box>
+          <IconButton onClick={onClose}><MdClose /></IconButton>
         </Box>
 
-        <DialogContent>
-          {payErr && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {payErr}
-            </Alert>
-          )}
-          {payOk && (
-            <Alert severity="success" sx={{ mb: 2 }}>
-              {payOk}
-            </Alert>
-          )}
+        <DialogContent sx={{ pt: 1 }}>
 
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: { xs: "column", sm: "row" },
-              gap: 2,
-              alignItems: "stretch",
-            }}
-          >
-            {plans.map((plan) => (
-              <Box
-                key={plan.key}
-                sx={{
-                  flex: 1,
-                  border: `2px solid ${plan.paid ? plan.color : "rgba(0,0,0,0.12)"}`,
-                  borderRadius: 3,
-                  p: 2.5,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 1,
-                  position: "relative",
-                  background: plan.paid
-                    ? `linear-gradient(135deg, ${plan.color}10, transparent)`
-                    : "transparent",
-                  transition: "box-shadow 0.2s",
-                  "&:hover": { boxShadow: `0 4px 24px ${plan.color}30` },
-                }}
-              >
-                {/* ── Unlocked badge ── */}
-                {plan.paid && plan.key !== "free" && (
-                  <Chip
-                    icon={<MdCheckCircle />}
-                    label="Unlocked"
-                    size="small"
+          {/* ── STEP: PICKER ───────────────────────────────────────────── */}
+          {step === STEP_PICKER && (
+            <>
+              {payErr && <Alert severity="error" sx={{ mb: 2 }}>{payErr}</Alert>}
+              {payOk  && <Alert severity="success" sx={{ mb: 2 }}>{payOk}</Alert>}
+              <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, gap: 2, alignItems: "stretch" }}>
+                {plans.map((plan) => (
+                  <Box
+                    key={plan.key}
                     sx={{
-                      position: "absolute",
-                      top: 12,
-                      right: 12,
-                      bgcolor: plan.color,
-                      color: "#fff",
-                      fontWeight: 700,
-                      "& .MuiChip-icon": { color: "#fff" },
+                      flex: 1, border: `2px solid ${plan.paid ? plan.color : "rgba(0,0,0,0.12)"}`,
+                      borderRadius: 3, p: 2.5, display: "flex", flexDirection: "column", gap: 1,
+                      position: "relative",
+                      background: plan.paid ? `linear-gradient(135deg, ${plan.color}10, transparent)` : "transparent",
+                      transition: "box-shadow 0.2s",
+                      "&:hover": { boxShadow: `0 4px 24px ${plan.color}30` },
                     }}
-                  />
-                )}
-
-                {/* ── Name + price ── */}
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  {plan.key !== "free" && (
-                    <MdStar style={{ color: GOLD, fontSize: 20 }} />
-                  )}
-                  <Typography
-                    variant="subtitle1"
-                    sx={{ fontWeight: 900, color: plan.color }}
                   >
-                    {plan.label}
+                    {plan.paid && plan.key !== "free" && (
+                      <Chip icon={<MdCheckCircle />} label="Unlocked" size="small" sx={{ position: "absolute", top: 12, right: 12, bgcolor: plan.color, color: "#fff", fontWeight: 700, "& .MuiChip-icon": { color: "#fff" } }} />
+                    )}
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      {plan.key !== "free" && <MdStar style={{ color: GOLD, fontSize: 20 }} />}
+                      <Typography variant="subtitle1" sx={{ fontWeight: 900, color: plan.color }}>{plan.label}</Typography>
+                    </Box>
+                    <Typography variant="h4" sx={{ fontWeight: 900 }}>
+                      {plan.price}
+                      {plan.key !== "free" && <Typography component="span" variant="caption" sx={{ ml: 0.5 }}>one-time</Typography>}
+                    </Typography>
+                    <Box sx={{ flex: 1 }}>
+                      {plan.features.map((f) => <Typography key={f} variant="body2" sx={{ py: 0.25 }}>✓ {f}</Typography>)}
+                    </Box>
+
+                    {plan.key !== "free" && (
+                      plan.previewPdf
+                        ? <Tooltip title="Preview layout PDF"><IconButton size="small" sx={{ alignSelf: "flex-start", color: plan.color }} onClick={() => setPdfUrl(plan.previewPdf)}><MdVisibility /></IconButton></Tooltip>
+                        : <Typography variant="caption" sx={{ opacity: 0.4, fontSize: "0.7rem", alignSelf: "flex-start" }}>No preview available</Typography>
+                    )}
+
+                    {plan.paid ? (
+                      <Button variant="contained" fullWidth onClick={plan.onGenerate} sx={{ mt: 1, borderRadius: 999, fontWeight: 800, background: `linear-gradient(135deg, ${plan.color}, ${plan.color}cc)` }}>
+                        Generate {plan.label}
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outlined" fullWidth
+                        startIcon={<MdLock />}
+                        onClick={() => handlePayAndUnlock(plan.version)}
+                        sx={{ mt: 1, borderRadius: 999, fontWeight: 800, borderColor: plan.color, color: plan.color }}
+                      >
+                        Pay &amp; Unlock
+                      </Button>
+                    )}
+                  </Box>
+                ))}
+              </Box>
+            </>
+          )}
+
+          {/* ── STEP: QR ───────────────────────────────────────────────── */}
+          {step === STEP_QR && activePlan && (
+            <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, py: 1 }}>
+
+              {/* QR image */}
+              <Box sx={{
+                p: 2, borderRadius: 3, border: `2px solid ${activePlan.color}40`,
+                background: `linear-gradient(135deg, ${activePlan.color}08, transparent)`,
+                display: "flex", flexDirection: "column", alignItems: "center", gap: 1.5,
+                width: "100%", maxWidth: 340,
+              }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <MdQrCode2 style={{ color: activePlan.color, fontSize: 22 }} />
+                  <Typography sx={{ fontWeight: 800, color: activePlan.color }}>
+                    Scan &amp; Pay {activePlan.price}
                   </Typography>
                 </Box>
 
-                <Typography variant="h4" sx={{ fontWeight: 900 }}>
-                  {plan.price}
-                  {plan.key !== "free" && (
-                    <Typography
-                      component="span"
-                      variant="caption"
-                      sx={{ ml: 0.5 }}
-                    >
-                      one-time
-                    </Typography>
-                  )}
-                </Typography>
-
-                {/* ── Features ── */}
-                <Box sx={{ flex: 1 }}>
-                  {plan.features.map((f) => (
-                    <Typography key={f} variant="body2" sx={{ py: 0.25 }}>
-                      ✓ {f}
-                    </Typography>
-                  ))}
-                </Box>
-
-                {/* ── Eye icon — preview PDF (only shown if PDF uploaded in Controller) ── */}
-                {plan.key !== "free" && (
-                  plan.previewPdf ? (
-                    <Tooltip title="Preview layout PDF">
-                      <IconButton
-                        size="small"
-                        sx={{ alignSelf: "flex-start", color: plan.color }}
-                        onClick={() => setPdfUrl(plan.previewPdf)}
-                      >
-                        <MdVisibility />
-                      </IconButton>
-                    </Tooltip>
-                  ) : (
-                    <Typography
-                      variant="caption"
-                      sx={{ opacity: 0.4, fontSize: "0.7rem", alignSelf: "flex-start" }}
-                    >
-                      No preview available
-                    </Typography>
-                  )
+                {qrUrls[activePlan.key] ? (
+                  <Box
+                    component="img"
+                    src={`${qrUrls[activePlan.key]}?t=${Date.now()}`}
+                    alt="UPI QR Code"
+                    sx={{ width: 220, height: 220, objectFit: "contain", borderRadius: 2, border: "1px solid rgba(0,0,0,0.08)", background: "#fff", p: 1 }}
+                  />
+                ) : (
+                  <Box sx={{ width: 220, height: 220, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", borderRadius: 2, border: "1px dashed rgba(0,0,0,0.18)", gap: 1 }}>
+                    <MdQrCode2 style={{ fontSize: 48, opacity: 0.25 }} />
+                    <Typography variant="caption" sx={{ opacity: 0.5, textAlign: "center" }}>QR not uploaded yet.<br />Contact support.</Typography>
+                  </Box>
                 )}
 
-                {/* ── Action buttons ── */}
-                {plan.paid ? (
-                  /* Already unlocked → Generate button */
+                <Typography variant="caption" sx={{ opacity: 0.6, textAlign: "center" }}>
+                  Pay ₹{activePlan.price.replace("₹", "")} using any UPI app
+                </Typography>
+              </Box>
+
+              {/* Pay via Razorpay — coming soon */}
+              <Button
+                variant="outlined" fullWidth
+                sx={{ borderRadius: 999, fontWeight: 800, maxWidth: 340, borderColor: activePlan.color, color: activePlan.color }}
+                onClick={() => {
+                  // coming soon popup
+                  setPayErr("");
+                  setPayOk("🚀 Razorpay integration coming soon!");
+                }}
+              >
+                Pay via Razorpay
+              </Button>
+              {payOk && <Alert severity="info" sx={{ width: "100%", maxWidth: 340 }}>{payOk}</Alert>}
+
+              {/* I've Paid button */}
+              <Button
+                variant="contained" fullWidth
+                sx={{ borderRadius: 999, fontWeight: 800, maxWidth: 340, background: `linear-gradient(135deg, ${activePlan.color}, ${activePlan.color}cc)` }}
+                onClick={() => { setPayOk(""); setStep(STEP_FORM); }}
+              >
+                ✅ I've Paid — Submit Details
+              </Button>
+            </Box>
+          )}
+
+          {/* ── STEP: FORM ─────────────────────────────────────────────── */}
+          {step === STEP_FORM && activePlan && (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5, py: 1, maxWidth: 480, mx: "auto" }}>
+
+              {formDone ? (
+                /* ── Success state ── */
+                <Box sx={{ textAlign: "center", py: 4, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                  <Box sx={{ fontSize: 64 }}>🎉</Box>
+                  <Typography variant="h6" sx={{ fontWeight: 900 }}>Request Submitted!</Typography>
+                  <Typography variant="body2" sx={{ opacity: 0.7, maxWidth: 340 }}>
+                    Your payment details have been sent for review. Once approved, your <strong>Premium {activeVersion}</strong> portfolio will be unlocked automatically.
+                  </Typography>
+                  <Button variant="outlined" sx={{ borderRadius: 999, mt: 1, borderColor: activePlan.color, color: activePlan.color }} onClick={onClose}>
+                    Close
+                  </Button>
+                </Box>
+              ) : (
+                <>
+                  <Typography variant="body2" sx={{ opacity: 0.7 }}>
+                    Fill in your payment details. All fields are required. Our team will verify and unlock your premium access.
+                  </Typography>
+
+                  {formErr && <Alert severity="error">{formErr}</Alert>}
+
+                  <TextField
+                    label="Full Name"
+                    size="small"
+                    fullWidth
+                    required
+                    value={form.fullName}
+                    onChange={e => setForm(f => ({ ...f, fullName: e.target.value }))}
+                    helperText="As per your profile / registration"
+                  />
+
+                  <TextField
+                    label="Your Phone Number"
+                    size="small"
+                    fullWidth
+                    required
+                    value={form.phone}
+                    onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
+                    inputProps={{ inputMode: "tel" }}
+                  />
+
+                  <TextField
+                    label="Payment / Transaction ID"
+                    size="small"
+                    fullWidth
+                    required
+                    value={form.paymentId}
+                    onChange={e => setForm(f => ({ ...f, paymentId: e.target.value }))}
+                    helperText="From your UPI app after payment"
+                  />
+
+                  <FormControl size="small" fullWidth required>
+                    <InputLabel>Paid Via</InputLabel>
+                    <Select
+                      value={form.paidVia}
+                      label="Paid Via"
+                      onChange={e => setForm(f => ({ ...f, paidVia: e.target.value }))}
+                    >
+                      <MenuItem value="Google Pay">Google Pay</MenuItem>
+                      <MenuItem value="PhonePe">PhonePe</MenuItem>
+                      <MenuItem value="Paytm">Paytm</MenuItem>
+                      <MenuItem value="BHIM UPI">BHIM UPI</MenuItem>
+                      <MenuItem value="Other">Other</MenuItem>
+                    </Select>
+                  </FormControl>
+
+                  <TextField
+                    label="Paid From Mobile Number"
+                    size="small"
+                    fullWidth
+                    required
+                    value={form.paidFromMobile}
+                    onChange={e => setForm(f => ({ ...f, paidFromMobile: e.target.value }))}
+                    helperText="Mobile number linked to your UPI"
+                    inputProps={{ inputMode: "tel" }}
+                  />
+
+                  <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: `${activePlan.color}10`, border: `1px solid ${activePlan.color}30` }}>
+                    <Typography variant="caption" sx={{ opacity: 0.7 }}>
+                      <strong>Version:</strong> Premium {activeVersion} — {activePlan.price}&nbsp;&nbsp;|&nbsp;&nbsp;
+                      <strong>Username:</strong> {username}
+                    </Typography>
+                  </Box>
+
                   <Button
                     variant="contained"
                     fullWidth
-                    onClick={plan.onGenerate}
-                    sx={{
-                      mt: 1,
-                      borderRadius: 999,
-                      fontWeight: 800,
-                      background: `linear-gradient(135deg, ${plan.color}, ${plan.color}cc)`,
-                    }}
+                    size="large"
+                    disabled={formSubmitting}
+                    startIcon={formSubmitting ? <CircularProgress size={16} color="inherit" /> : <MdSend />}
+                    onClick={handleFormSubmit}
+                    sx={{ borderRadius: 999, fontWeight: 800, background: `linear-gradient(135deg, ${activePlan.color}, ${activePlan.color}cc)` }}
                   >
-                    Generate {plan.label}
+                    {formSubmitting ? "Submitting…" : "Submit Payment Details"}
                   </Button>
-                ) : (
-                  /* Locked → Pay & Unlock  +  ⚡ Skip (Test) */
-                  <Box sx={{ display: "flex", flexDirection: "column", gap: 1, mt: 1 }}>
-                    {/* Pay & Unlock */}
-                    <Button
-                      variant="outlined"
-                      fullWidth
-                      disabled={busy}
-                      startIcon={
-                        paying === plan.version ? (
-                          <CircularProgress size={14} />
-                        ) : (
-                          <MdLock />
-                        )
-                      }
-                      onClick={() => handlePay(plan.version)}
-                      sx={{
-                        borderRadius: 999,
-                        fontWeight: 800,
-                        borderColor: plan.color,
-                        color: plan.color,
-                      }}
-                    >
-                      {paying === plan.version ? "Processing…" : "Pay & Unlock"}
-                    </Button>
+                </>
+              )}
+            </Box>
+          )}
 
-                    {/* ⚡ Skip (Test) */}
-                    <Button
-                      variant="text"
-                      fullWidth
-                      size="small"
-                      disabled={busy}
-                      startIcon={
-                        skipping === plan.version ? (
-                          <CircularProgress size={12} />
-                        ) : null
-                      }
-                      onClick={() => handleSkip(plan.version)}
-                      sx={{
-                        borderRadius: 999,
-                        fontWeight: 700,
-                        fontSize: "0.72rem",
-                        color: "text.secondary",
-                        border: "1px dashed",
-                        borderColor: "divider",
-                        "&:hover": {
-                          borderColor: plan.color,
-                          color: plan.color,
-                          background: `${plan.color}08`,
-                        },
-                      }}
-                    >
-                      {skipping === plan.version ? "Unlocking…" : "⚡ Skip (Test)"}
-                    </Button>
-                  </Box>
-                )}
-              </Box>
-            ))}
-          </Box>
         </DialogContent>
       </Dialog>
     </>
