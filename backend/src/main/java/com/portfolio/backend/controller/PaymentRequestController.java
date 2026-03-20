@@ -96,13 +96,21 @@ public class PaymentRequestController {
     }
 
     // PATCH /api/master-admin/payment-requests/{id}/reject
+    // Accepts optional { "rejectionReason": "..." } in request body
     @PatchMapping("/master-admin/payment-requests/{id}/reject")
     public ResponseEntity<?> rejectRequest(
             @PathVariable Long id,
-            @RequestHeader(value = "Authorization", required = false) String auth) {
+            @RequestHeader(value = "Authorization", required = false) String auth,
+            @RequestBody(required = false) Map<String, Object> body) {
         if (!isController(auth)) return ResponseEntity.status(403).body("Forbidden");
         return paymentRequestRepository.findById(id).map(req -> {
             req.setStatus("REJECTED");
+            if (body != null && body.get("rejectionReason") != null) {
+                String reason = String.valueOf(body.get("rejectionReason")).trim();
+                if (!reason.isEmpty()) {
+                    req.setRejectionReason(reason);
+                }
+            }
             paymentRequestRepository.save(req);
             return ResponseEntity.ok(Map.of("message", "Rejected"));
         }).orElse(ResponseEntity.notFound().build());
@@ -135,17 +143,18 @@ public class PaymentRequestController {
         List<Map<String, Object>> requestDtos = new ArrayList<>();
         for (PaymentRequest r : userRequests) {
             Map<String, Object> dto = new LinkedHashMap<>();
-            dto.put("id",             r.getId());
-            dto.put("username",       r.getUsername());
-            dto.put("fullName",       r.getFullName());
-            dto.put("phone",          r.getPhone());
-            dto.put("paymentId",      r.getPaymentId());
-            dto.put("paidVia",        r.getPaidVia());
-            dto.put("paidFromMobile", r.getPaidFromMobile());
-            dto.put("version",        r.getVersion());
-            dto.put("status",         r.getStatus());
-            dto.put("createdAt",      r.getCreatedAt());
-            dto.put("updatedAt",      r.getUpdatedAt());
+            dto.put("id",              r.getId());
+            dto.put("username",        r.getUsername());
+            dto.put("fullName",        r.getFullName());
+            dto.put("phone",           r.getPhone());
+            dto.put("paymentId",       r.getPaymentId());
+            dto.put("paidVia",         r.getPaidVia());
+            dto.put("paidFromMobile",  r.getPaidFromMobile());
+            dto.put("version",         r.getVersion());
+            dto.put("status",          r.getStatus());
+            dto.put("rejectionReason", r.getRejectionReason()); // null if not rejected / no reason set
+            dto.put("createdAt",       r.getCreatedAt());
+            dto.put("updatedAt",       r.getUpdatedAt());
             requestDtos.add(dto);
         }
 

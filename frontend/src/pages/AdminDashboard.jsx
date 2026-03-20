@@ -3151,216 +3151,223 @@ const saveEditSkill = (i) => {
                 }
               />
 
-              {statusErr ? (
-                <Alert severity="error" sx={{ mb: 2 }}>{statusErr}</Alert>
-              ) : null}
+              {statusErr ? <Alert severity="error" sx={{ mb: 2 }}>{statusErr}</Alert> : null}
 
-              {statusLoading ? (
-                <Paper variant="outlined" sx={{ borderRadius: 3, p: 4, textAlign: "center" }}>
-                  <Typography sx={{ opacity: 0.6 }}>Loading your requests…</Typography>
-                </Paper>
-              ) : statusRequests.length === 0 ? (
-                <Paper variant="outlined" sx={{ borderRadius: 3, p: 5, textAlign: "center" }}>
-                  <Typography sx={{ fontSize: 42, mb: 1 }}>📭</Typography>
-                  <Typography sx={{ fontWeight: 950, mb: 0.5 }}>No Requests Yet</Typography>
-                  <Typography variant="body2" sx={{ opacity: 0.6, mb: 2.5 }}>
-                    You haven't submitted any payment requests. Go to Generate Portfolio to unlock a premium version.
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    size="small"
-                    onClick={() => setVersionPickerOpen(true)}
-                    sx={{
-                      borderRadius: 999,
-                      fontWeight: 950,
-                      background: `linear-gradient(135deg, ${BRAND_PRIMARY}, ${BRAND_DARK})`,
-                    }}
-                  >
-                    Generate Portfolio
-                  </Button>
-                </Paper>
-              ) : (
-                <Stack spacing={2}>
-                  {statusRequests.map((req, idx) => {
-                    const isApproved = req.status === "APPROVED";
-                    const isRejected = req.status === "REJECTED";
-                    const isPending  = req.status === "PENDING";
-                    const version    = req.version;
-                    const planColor  = version === 2 ? "#7c3aed" : BRAND_PRIMARY;
-                    const planDark   = version === 2 ? "#5b21b6" : BRAND_DARK;
+              <Paper variant="outlined" sx={{ borderRadius: 3, overflow: "hidden" }}>
 
-                    const statusColor  = isApproved ? "#10b981" : isRejected ? "#f43f5e" : "#f59e0b";
-                    const statusBg     = isApproved ? "rgba(16,185,129,0.08)" : isRejected ? "rgba(244,63,94,0.07)" : "rgba(245,158,11,0.08)";
-                    const statusBorder = isApproved ? "rgba(16,185,129,0.25)" : isRejected ? "rgba(244,63,94,0.22)" : "rgba(245,158,11,0.25)";
-                    const statusLabel  = isApproved ? "✅ Approved" : isRejected ? "❌ Rejected" : "⏳ Pending — Waiting for Approval";
-                    const statusDesc   = isApproved
-                      ? "Your payment was verified. Your premium access is now active!"
-                      : isRejected
-                      ? "Your request was not approved. Please try again with correct payment details."
-                      : "Our team is reviewing your payment. This usually takes a few hours.";
+                {/* ── loading ── */}
+                {statusLoading ? (
+                  <Box sx={{ p: 4, textAlign: "center" }}>
+                    <Typography sx={{ opacity: 0.6 }}>Loading your requests…</Typography>
+                  </Box>
 
-                    return (
-                      <Paper
-                        key={req.id || idx}
-                        variant="outlined"
-                        sx={{
-                          borderRadius: 3,
-                          overflow: "hidden",
-                          border: (t) => `1.5px solid ${isApproved ? "rgba(16,185,129,0.28)" : isRejected ? "rgba(244,63,94,0.22)" : `${planColor}30`}`,
-                          background: (t) =>
-                            t.palette.mode === "dark"
-                              ? statusBg
-                              : isApproved ? "rgba(16,185,129,0.03)" : isRejected ? "rgba(244,63,94,0.03)" : `${planColor}06`,
-                        }}
-                      >
-                        {/* Card header strip */}
-                        <Box
-                          sx={{
-                            px: 2.5,
-                            py: 1.2,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            borderBottom: (t) => `1px solid ${t.palette.divider}`,
-                            background: (t) =>
-                              t.palette.mode === "dark"
-                                ? "rgba(255,255,255,0.02)"
-                                : "rgba(0,0,0,0.02)",
-                          }}
-                        >
-                          <Stack direction="row" spacing={1} alignItems="center">
-                            <Typography sx={{ fontWeight: 900, fontSize: 13, opacity: 0.45 }}>
-                              #{idx + 1}
-                            </Typography>
-                            <Chip
-                              size="small"
-                              label={`Premium ${version}`}
-                              icon={<MdStar style={{ fontSize: 13 }} />}
+                /* ── empty ── */
+                ) : statusRequests.length === 0 ? (
+                  <Box sx={{ p: 5, textAlign: "center" }}>
+                    <Typography sx={{ fontSize: 40, mb: 1 }}>📭</Typography>
+                    <Typography sx={{ fontWeight: 950, mb: 0.5 }}>No Requests Yet</Typography>
+                    <Typography variant="body2" sx={{ opacity: 0.6, mb: 2.5 }}>
+                      You haven't submitted any payment requests yet.
+                    </Typography>
+                    <Button
+                      variant="contained"
+                      size="small"
+                      onClick={() => setVersionPickerOpen(true)}
+                      sx={{
+                        borderRadius: 999,
+                        fontWeight: 950,
+                        background: `linear-gradient(135deg, ${BRAND_PRIMARY}, ${BRAND_DARK})`,
+                      }}
+                    >
+                      Generate Portfolio
+                    </Button>
+                  </Box>
+
+                /* ── table ── */
+                ) : (
+                  <TableContainer>
+                    <Table>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell sx={{ fontWeight: 950, width: 52 }}>#</TableCell>
+                          <TableCell sx={{ fontWeight: 950 }}>Plan</TableCell>
+                          <TableCell sx={{ fontWeight: 950 }}>Txn ID</TableCell>
+                          <TableCell sx={{ fontWeight: 950 }}>Paid Via</TableCell>
+                          <TableCell sx={{ fontWeight: 950 }}>Submitted</TableCell>
+                          <TableCell sx={{ fontWeight: 950 }}>Status</TableCell>
+                          <TableCell sx={{ fontWeight: 950 }}>Reason / Note</TableCell>
+                          <TableCell sx={{ fontWeight: 950, width: 160 }}>Action</TableCell>
+                        </TableRow>
+                      </TableHead>
+
+                      <TableBody>
+                        {statusRequests.map((req, idx) => {
+                          const isApproved = req.status === "APPROVED";
+                          const isRejected = req.status === "REJECTED";
+                          const isPending  = req.status === "PENDING";
+                          const version    = req.version;
+                          const planColor  = version === 2 ? "#7c3aed" : BRAND_PRIMARY;
+                          const planDark   = version === 2 ? "#5b21b6" : BRAND_DARK;
+
+                          const statusColor  = isApproved ? "#10b981" : isRejected ? "#f43f5e" : "#f59e0b";
+                          const statusBg     = isApproved ? "rgba(16,185,129,0.10)" : isRejected ? "rgba(244,63,94,0.09)" : "rgba(245,158,11,0.10)";
+                          const statusBorder = isApproved ? "rgba(16,185,129,0.30)" : isRejected ? "rgba(244,63,94,0.28)" : "rgba(245,158,11,0.30)";
+                          const statusLabel  = isApproved ? "✅ Approved" : isRejected ? "❌ Rejected" : "⏳ Pending";
+                          const reasonText   = isApproved
+                            ? "Payment verified. Access active!"
+                            : isRejected
+                            ? "Not approved. Please retry with correct details."
+                            : "Under review. Usually takes a few hours.";
+
+                          return (
+                            <TableRow
+                              key={req.id || idx}
+                              hover
                               sx={{
-                                borderRadius: 2,
-                                fontWeight: 900,
-                                fontSize: 11.5,
-                                bgcolor: `${planColor}18`,
-                                border: `1px solid ${planColor}38`,
-                                color: planColor,
-                                "& .MuiChip-icon": { color: planColor },
+                                borderLeft: `3px solid ${isApproved ? "#10b981" : isRejected ? "#f43f5e" : "#f59e0b"}`,
                               }}
-                            />
-                          </Stack>
-                          <Chip
-                            size="small"
-                            label={isApproved ? "Approved" : isRejected ? "Rejected" : "Pending"}
-                            sx={{
-                              borderRadius: 2,
-                              fontWeight: 900,
-                              fontSize: 11.5,
-                              bgcolor: statusBg,
-                              border: `1px solid ${statusBorder}`,
-                              color: statusColor,
-                            }}
-                          />
-                        </Box>
+                            >
+                              {/* # */}
+                              <TableCell sx={{ fontWeight: 900, opacity: 0.5, fontSize: 13 }}>
+                                {idx + 1}
+                              </TableCell>
 
-                        {/* Card body */}
-                        <Box sx={{ p: 2.5 }}>
-                          <Grid container spacing={2} sx={{ mb: 2 }}>
-                            {[
-                              ["Transaction ID", req.paymentId, true],
-                              ["Paid Via", req.paidVia, false],
-                              ["From Mobile", req.paidFromMobile, false],
-                              ["Full Name", req.fullName, false],
-                              ["Submitted", req.createdAt
-                                ? new Date(req.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
-                                : "—", false],
-                              ...(req.updatedAt ? [["Last Updated", new Date(req.updatedAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }), false]] : []),
-                            ].map(([label, val, mono]) => (
-                              <Grid item xs={6} md={4} key={label}>
-                                <Typography sx={{ fontSize: 9.5, fontWeight: 700, opacity: 0.45, textTransform: "uppercase", letterSpacing: "0.07em", mb: 0.3 }}>
-                                  {label}
-                                </Typography>
-                                <Typography sx={{ fontSize: 12.5, fontWeight: 700, fontFamily: mono ? "monospace" : "inherit", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                  {val || "—"}
-                                </Typography>
-                              </Grid>
-                            ))}
-                          </Grid>
+                              {/* Plan */}
+                              <TableCell>
+                                <Chip
+                                  size="small"
+                                  label={`Premium ${version}`}
+                                  icon={<MdStar style={{ fontSize: 12 }} />}
+                                  sx={{
+                                    borderRadius: 2,
+                                    fontWeight: 900,
+                                    fontSize: 11,
+                                    bgcolor: `${planColor}18`,
+                                    border: `1px solid ${planColor}38`,
+                                    color: planColor,
+                                    "& .MuiChip-icon": { color: planColor },
+                                  }}
+                                />
+                              </TableCell>
 
-                          {/* Status message box */}
-                          <Box
-                            sx={{
-                              px: 2,
-                              py: 1.2,
-                              borderRadius: 2,
-                              bgcolor: statusBg,
-                              border: `1px solid ${statusBorder}`,
-                              mb: (isApproved || isRejected) ? 2 : 0,
-                            }}
-                          >
-                            <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: statusColor, mb: 0.3 }}>
-                              {statusLabel}
-                            </Typography>
-                            <Typography sx={{ fontSize: 12, opacity: 0.8 }}>
-                              {statusDesc}
-                            </Typography>
-                          </Box>
-
-                          {/* Action buttons */}
-                          {isPending && (
-                            <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1.5, opacity: 0.55 }}>
-                              <LinearProgress
+                              {/* Txn ID */}
+                              <TableCell
                                 sx={{
-                                  flex: 1,
-                                  height: 5,
-                                  borderRadius: 999,
-                                  backgroundColor: "rgba(245,158,11,0.15)",
-                                  "& .MuiLinearProgress-bar": { bgcolor: "#f59e0b" },
+                                  fontFamily: "monospace",
+                                  fontSize: 12.5,
+                                  fontWeight: 700,
+                                  maxWidth: 130,
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
                                 }}
-                              />
-                              <Typography variant="caption">Awaiting review…</Typography>
-                            </Stack>
-                          )}
+                              >
+                                {req.paymentId || "—"}
+                              </TableCell>
 
-                          {isApproved && (
-                            <Button
-                              variant="contained"
-                              fullWidth
-                              startIcon={<MdVisibility />}
-                              onClick={() => {
-                                if (version === 1) navigate(`/${username}/adminpanel/premium1`);
-                                else navigate(`/${username}/adminpanel/premium2`);
-                              }}
-                              sx={{
-                                borderRadius: 999,
-                                fontWeight: 950,
-                                background: `linear-gradient(135deg, ${planColor}, ${planDark})`,
-                              }}
-                            >
-                              Generate Premium {version} Portfolio
-                            </Button>
-                          )}
+                              {/* Paid Via */}
+                              <TableCell sx={{ fontSize: 13, opacity: 0.85 }}>
+                                {req.paidVia || "—"}
+                              </TableCell>
 
-                          {isRejected && (
-                            <Button
-                              variant="outlined"
-                              fullWidth
-                              startIcon={<MdRefresh />}
-                              onClick={() => setVersionPickerOpen(true)}
-                              sx={{
-                                borderRadius: 999,
-                                fontWeight: 950,
-                                borderColor: planColor,
-                                color: planColor,
-                              }}
-                            >
-                              Try Again — Pay &amp; Unlock Premium {version}
-                            </Button>
-                          )}
-                        </Box>
-                      </Paper>
-                    );
-                  })}
-                </Stack>
-              )}
+                              {/* Submitted */}
+                              <TableCell sx={{ fontSize: 12, opacity: 0.75, whiteSpace: "nowrap" }}>
+                                {req.createdAt
+                                  ? new Date(req.createdAt).toLocaleDateString("en-IN", {
+                                      day: "2-digit", month: "short", year: "numeric",
+                                    })
+                                  : "—"}
+                              </TableCell>
+
+                              {/* Status chip */}
+                              <TableCell>
+                                <Chip
+                                  size="small"
+                                  label={statusLabel}
+                                  sx={{
+                                    borderRadius: 2,
+                                    fontWeight: 900,
+                                    fontSize: 11,
+                                    bgcolor: statusBg,
+                                    border: `1px solid ${statusBorder}`,
+                                    color: statusColor,
+                                    whiteSpace: "nowrap",
+                                  }}
+                                />
+                              </TableCell>
+
+                              {/* Reason / Note */}
+                              <TableCell sx={{ fontSize: 12, opacity: 0.75, maxWidth: 200 }}>
+                                {req.rejectionReason
+                                  ? <Typography sx={{ fontSize: 12, color: "#f43f5e" }}>{req.rejectionReason}</Typography>
+                                  : <Typography sx={{ fontSize: 12, opacity: 0.6, fontStyle: "italic" }}>{reasonText}</Typography>
+                                }
+                              </TableCell>
+
+                              {/* Action */}
+                              <TableCell>
+                                {isPending && (
+                                  <Stack spacing={0.5}>
+                                    <LinearProgress
+                                      sx={{
+                                        height: 4,
+                                        borderRadius: 999,
+                                        backgroundColor: "rgba(245,158,11,0.15)",
+                                        "& .MuiLinearProgress-bar": { bgcolor: "#f59e0b" },
+                                      }}
+                                    />
+                                    <Typography variant="caption" sx={{ opacity: 0.5, fontSize: 10 }}>
+                                      Awaiting review…
+                                    </Typography>
+                                  </Stack>
+                                )}
+                                {isApproved && (
+                                  <Button
+                                    variant="contained"
+                                    size="small"
+                                    startIcon={<MdVisibility />}
+                                    onClick={() => {
+                                      if (version === 1) navigate(`/${username}/adminpanel/premium1`);
+                                      else navigate(`/${username}/adminpanel/premium2`);
+                                    }}
+                                    sx={{
+                                      borderRadius: 999,
+                                      fontWeight: 950,
+                                      fontSize: 11,
+                                      whiteSpace: "nowrap",
+                                      background: `linear-gradient(135deg, ${planColor}, ${planDark})`,
+                                    }}
+                                  >
+                                    Generate P{version}
+                                  </Button>
+                                )}
+                                {isRejected && (
+                                  <Button
+                                    variant="outlined"
+                                    size="small"
+                                    startIcon={<MdRefresh />}
+                                    onClick={() => setVersionPickerOpen(true)}
+                                    sx={{
+                                      borderRadius: 999,
+                                      fontWeight: 950,
+                                      fontSize: 11,
+                                      whiteSpace: "nowrap",
+                                      borderColor: planColor,
+                                      color: planColor,
+                                    }}
+                                  >
+                                    Try Again
+                                  </Button>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                )}
+              </Paper>
             </Box>
           ) : null}
 

@@ -24,16 +24,19 @@ public class PaymentRequest {
     private String paymentId;
 
     @Column(nullable = false)
-    private String paidVia; // "Google Pay", "PhonePe", "Other"
+    private String paidVia;
 
     @Column(nullable = false)
     private String paidFromMobile;
 
     @Column(nullable = false)
-    private Integer version; // 1 or 2
+    private Integer version;
 
     @Column(nullable = false)
-    private String status; // "PENDING", "APPROVED", "REJECTED"
+    private String status;
+
+    @Column(length = 500)
+    private String rejectionReason;
 
     @Column(nullable = false)
     private LocalDateTime createdAt;
@@ -71,6 +74,8 @@ public class PaymentRequest {
     public void setVersion(Integer version) { this.version = version; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+    public String getRejectionReason() { return rejectionReason; }
+    public void setRejectionReason(String rejectionReason) { this.rejectionReason = rejectionReason; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
