@@ -51,7 +51,8 @@ public class PaymentRequestController {
     public ResponseEntity<?> submitRequest(@RequestBody Map<String, Object> body) {
         try {
             PaymentRequest req = new PaymentRequest();
-            req.setUsername(String.valueOf(body.get("username")));
+            // Always store username in lowercase for consistent lookups
+            req.setUsername(String.valueOf(body.get("username")).trim().toLowerCase());
             req.setFullName(String.valueOf(body.get("fullName")));
             req.setPhone(String.valueOf(body.get("phone")));
             req.setPaymentId(String.valueOf(body.get("paymentId")));
@@ -80,18 +81,22 @@ public class PaymentRequestController {
             @PathVariable Long id,
             @RequestHeader(value = "Authorization", required = false) String auth) {
         if (!isController(auth)) return ResponseEntity.status(403).body("Forbidden");
+
         return paymentRequestRepository.findById(id).map(req -> {
             req.setStatus("APPROVED");
             paymentRequestRepository.save(req);
 
-            // ── KEY FIX: persist premium flag on User row ──────────────────
-            userRepository.findByUsername(req.getUsername()).ifPresent(user -> {
+            // ── KEY FIX: use case-insensitive lookup so "Dheena"/"dheena" both match ──
+            String uLower = req.getUsername() == null ? "" : req.getUsername().trim().toLowerCase();
+            userRepository.findByUsernameIgnoreCase(uLower).ifPresent(user -> {
                 if (req.getVersion() == 1) user.setHasPremium1(true);
                 if (req.getVersion() == 2) user.setHasPremium2(true);
                 userRepository.save(user);
             });
 
-            return ResponseEntity.ok(Map.of("message", "Approved"));
+            return ResponseEntity.ok(Map.of(
+                    "message", "Approved and premium unlocked for @" + req.getUsername()
+            ));
         }).orElse(ResponseEntity.notFound().build());
     }
 
@@ -120,22 +125,36 @@ public class PaymentRequestController {
     // Returns { hasPremium1: bool, hasPremium2: bool, requests: [...] }
     @GetMapping("/payment-requests/status")
     public ResponseEntity<?> getStatus(@RequestParam String username) {
+        // Normalize username for all lookups
+        String uLower = username == null ? "" : username.trim().toLowerCase();
+
         // Fetch all requests for this user (newest first)
         List<PaymentRequest> userRequests = paymentRequestRepository
-                .findByUsernameOrderByCreatedAtDesc(username);
+                .findByUsernameOrderByCreatedAtDesc(uLower);
 
-        // Primary source: User table (set on approve)
-        Optional<User> userOpt = userRepository.findByUsername(username);
+        // Primary source: User table flags (set during approve)
+        // Use case-insensitive lookup so it always finds the user regardless of stored casing
+        Optional<User> userOpt = userRepository.findByUsernameIgnoreCase(uLower);
         boolean p1 = userOpt.map(User::isHasPremium1).orElse(false);
         boolean p2 = userOpt.map(User::isHasPremium2).orElse(false);
 
-        // Fallback: scan approved payment_requests if User flags not set yet
+        // Fallback: scan approved payment_requests if User flags somehow not set yet
         if (!p1 || !p2) {
             for (PaymentRequest r : userRequests) {
                 if ("APPROVED".equals(r.getStatus())) {
                     if (r.getVersion() == 1) p1 = true;
                     if (r.getVersion() == 2) p2 = true;
                 }
+            }
+            // If fallback kicked in, sync the User row so it won't happen again
+            if (p1 || p2) {
+                boolean finalP1 = p1;
+                boolean finalP2 = p2;
+                userOpt.ifPresent(user -> {
+                    if (finalP1) user.setHasPremium1(true);
+                    if (finalP2) user.setHasPremium2(true);
+                    userRepository.save(user);
+                });
             }
         }
 
@@ -152,7 +171,7 @@ public class PaymentRequestController {
             dto.put("paidFromMobile",  r.getPaidFromMobile());
             dto.put("version",         r.getVersion());
             dto.put("status",          r.getStatus());
-            dto.put("rejectionReason", r.getRejectionReason()); // null if not rejected / no reason set
+            dto.put("rejectionReason", r.getRejectionReason());
             dto.put("createdAt",       r.getCreatedAt());
             dto.put("updatedAt",       r.getUpdatedAt());
             requestDtos.add(dto);

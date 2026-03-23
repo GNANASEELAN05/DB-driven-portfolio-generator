@@ -53,12 +53,11 @@ export default function Register() {
 
       localStorage.removeItem("token");
       sessionStorage.clear();
-      const serverUserLower = serverDisplay.trim().toLowerCase();
       localStorage.setItem("token", token);
-      localStorage.setItem("auth_user", serverUserLower);
+      localStorage.setItem("auth_user", uLower);
       localStorage.setItem("display_name", serverDisplay);
 
-      window.location.replace(`/${serverUserLower}/adminpanel`);
+      window.location.replace(`/${uLower}/adminpanel`);
     } catch (error) {
       const msg =
         error?.response?.data && typeof error.response.data === "string"

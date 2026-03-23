@@ -21,9 +21,9 @@ const GOLD   = "#f59e0b";
 const VIOLET = "#7c3aed";
 
 // ── Step constants ──────────────────────────────────────────────────────────
-const STEP_PICKER   = "picker";   // main plan cards
-const STEP_QR       = "qr";       // UPI QR + pay options
-const STEP_FORM     = "form";     // "I've Paid" form
+const STEP_PICKER = "picker";   // main plan cards
+const STEP_QR     = "qr";       // UPI QR + pay options
+const STEP_FORM   = "form";     // "I've Paid" form
 
 export default function VersionPickerModal({
   open,
@@ -37,15 +37,15 @@ export default function VersionPickerModal({
   onGeneratePremium2,
   onGoToStatus,
 }) {
-  const [step, setStep]       = useState(STEP_PICKER);
+  const [step, setStep]             = useState(STEP_PICKER);
   const [activeVersion, setActiveVersion] = useState(null); // 1 | 2
-  const [payErr, setPayErr]   = useState("");
-  const [payOk, setPayOk]     = useState("");
-  const [pdfUrl, setPdfUrl]   = useState(null);
+  const [payErr, setPayErr]         = useState("");
+  const [payOk, setPayOk]           = useState("");
+  const [pdfUrl, setPdfUrl]         = useState(null);
 
-  // Live premium status — re-fetched every time modal opens
-  const [hasPremium1, setHasPremium1] = useState(hasPremium1Prop);
-  const [hasPremium2, setHasPremium2] = useState(hasPremium2Prop);
+  // Live premium status — always driven by server on open
+  const [hasPremium1, setHasPremium1] = useState(false);
+  const [hasPremium2, setHasPremium2] = useState(false);
   const [premiumLoading, setPremiumLoading] = useState(false);
 
   // ── Preview PDF URLs ────────────────────────────────────────────────────
@@ -56,34 +56,21 @@ export default function VersionPickerModal({
 
   // ── "I've Paid" form state ──────────────────────────────────────────────
   const [form, setForm] = useState({
-    fullName: "",
-    phone: "",
-    paymentId: "",
-    paidVia: "",
-    paidFromMobile: "",
+    fullName: "", phone: "", paymentId: "", paidVia: "", paidFromMobile: "",
   });
-  const [formErr, setFormErr]       = useState("");
+  const [formErr, setFormErr]             = useState("");
   const [formSubmitting, setFormSubmitting] = useState(false);
-  const [formDone, setFormDone]     = useState(false);
+  const [formDone, setFormDone]           = useState(false);
 
-  // ── Sync prop changes into local state ─────────────────────────────────
-  useEffect(() => {
-    setHasPremium1(hasPremium1Prop);
-    setHasPremium2(hasPremium2Prop);
-  }, [hasPremium1Prop, hasPremium2Prop]);
+  // ── Track whether server has responded at least once this open ──────────
+  const hasServerResponded = React.useRef(false);
 
-  // ── Fetch live premium status ───────────────────────────────────────────
+  // ── Fetch live premium status — server is the ONLY source of truth ──────
   const fetchPremiumLive = async () => {
     if (!username) return;
+    // Always lowercase — matches how AdminLogin/Register stores auth_user
     const authUser = (localStorage.getItem("auth_user") || username || "").toLowerCase();
 
-    // Step 1: read localStorage instantly
-    const lsP1 = localStorage.getItem(`premium1_${authUser}`) === "true";
-    const lsP2 = localStorage.getItem(`premium2_${authUser}`) === "true";
-    if (lsP1) setHasPremium1(true);
-    if (lsP2) setHasPremium2(true);
-
-    // Always hit server — localStorage may be stale before approval
     setPremiumLoading(true);
     try {
       const token = localStorage.getItem("token");
@@ -93,22 +80,38 @@ export default function VersionPickerModal({
       );
       if (res.ok) {
         const data = await res.json();
-        // Backend always returns { hasPremium1: bool, hasPremium2: bool }
-        const p1 = Boolean(data.hasPremium1) || lsP1;
-        const p2 = Boolean(data.hasPremium2) || lsP2;
+        // Server response is the only source of truth — never OR with localStorage
+        const p1 = Boolean(data.hasPremium1);
+        const p2 = Boolean(data.hasPremium2);
         setHasPremium1(p1);
         setHasPremium2(p2);
-        if (p1) localStorage.setItem(`premium1_${authUser}`, "true");
-        if (p2) localStorage.setItem(`premium2_${authUser}`, "true");
-        // Only notify parent if something NEWLY became true (wasn't true in props before)
+        hasServerResponded.current = true;
+        // Overwrite localStorage to match server (corrects stale true → false too)
+        localStorage.setItem(`premium1_${authUser}`, String(p1));
+        localStorage.setItem(`premium2_${authUser}`, String(p2));
+        // Notify parent if something newly became true vs what props said
         const newlyP1 = p1 && !hasPremium1Prop;
         const newlyP2 = p2 && !hasPremium2Prop;
         if ((newlyP1 || newlyP2) && typeof onPremiumUnlocked === "function") {
           onPremiumUnlocked({ hasPremium1: p1, hasPremium2: p2 });
         }
+      } else {
+        // 4xx/5xx — clear stale flags so deleted+re-registered account shows clean
+        setHasPremium1(false);
+        setHasPremium2(false);
+        hasServerResponded.current = true;
+        localStorage.setItem(`premium1_${authUser}`, "false");
+        localStorage.setItem(`premium2_${authUser}`, "false");
       }
-    } catch { /* silent */ }
-    finally { setPremiumLoading(false); }
+    } catch {
+      // Network error: fall back to props so UI isn't broken while offline
+      if (!hasServerResponded.current) {
+        setHasPremium1(Boolean(hasPremium1Prop));
+        setHasPremium2(Boolean(hasPremium2Prop));
+      }
+    } finally {
+      setPremiumLoading(false);
+    }
   };
 
   // ── Fetch preview PDFs + QR URLs on open ───────────────────────────────
@@ -123,14 +126,15 @@ export default function VersionPickerModal({
           fetch(`${API_BASE}/master-admin/preview-pdfs/latest/premium2`).then(r => r.ok ? r.json() : null),
         ]);
         setPreviewPdfUrls({
-          premium1: r1.status === "fulfilled" && r1.value?.id ? `${API_BASE}/master-admin/preview-pdfs/${r1.value.id}/view` : null,
-          premium2: r2.status === "fulfilled" && r2.value?.id ? `${API_BASE}/master-admin/preview-pdfs/${r2.value.id}/view` : null,
+          premium1: r1.status === "fulfilled" && r1.value?.id
+            ? `${API_BASE}/master-admin/preview-pdfs/${r1.value.id}/view` : null,
+          premium2: r2.status === "fulfilled" && r2.value?.id
+            ? `${API_BASE}/master-admin/preview-pdfs/${r2.value.id}/view` : null,
         });
       } catch { /* leave null */ }
     };
 
-const checkQr = () => {
-      // Set URLs directly — endpoints are permitAll, no HEAD check needed
+    const checkQr = () => {
       setQrUrls({
         premium1: `${API_BASE}/upi-qr/premium1/view?t=${Date.now()}`,
         premium2: `${API_BASE}/upi-qr/premium2/view?t=${Date.now()}`,
@@ -141,9 +145,10 @@ const checkQr = () => {
     checkQr();
   }, [open]);
 
-  // ── Reset to picker when modal closes ──────────────────────────────────
+  // ── Reset everything when modal closes ─────────────────────────────────
   useEffect(() => {
     if (!open) {
+      hasServerResponded.current = false;
       setTimeout(() => {
         setStep(STEP_PICKER);
         setActiveVersion(null);
@@ -152,6 +157,9 @@ const checkQr = () => {
         setFormDone(false);
         setForm({ fullName: "", phone: "", paymentId: "", paidVia: "", paidFromMobile: "" });
         setFormErr("");
+        // Reset to props so next open shows something before server responds
+        setHasPremium1(Boolean(hasPremium1Prop));
+        setHasPremium2(Boolean(hasPremium2Prop));
       }, 300);
     }
   }, [open]);
@@ -177,11 +185,12 @@ const checkQr = () => {
     setFormErr("");
     setFormSubmitting(true);
     try {
+      const authUserForSubmit = (localStorage.getItem("auth_user") || username || "").toLowerCase();
       const res = await fetch(`${API_BASE}/payment-requests`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          username,
+          username: authUserForSubmit,
           fullName: fullName.trim(),
           phone: phone.trim(),
           paymentId: paymentId.trim(),
@@ -192,25 +201,26 @@ const checkQr = () => {
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setFormDone(true);
-      // Poll every 5s using the correct endpoint
-      const authUserForPoll = (localStorage.getItem("auth_user") || username || "").toLowerCase();
+
+      // Poll every 5s — server is sole authority, never OR with localStorage
+      const authUserForPoll = authUserForSubmit;
       const pollInterval = setInterval(async () => {
         try {
           const token = localStorage.getItem("token");
-          const res = await fetch(
+          const pollRes = await fetch(
             `${API_BASE}/payment-requests/status?username=${encodeURIComponent(authUserForPoll)}`,
             { headers: token ? { Authorization: `Bearer ${token}` } : {} }
           );
-          if (res.ok) {
-            const data = await res.json();
-            // Backend always returns { hasPremium1: bool, hasPremium2: bool }
-            const p1 = Boolean(data.hasPremium1) || localStorage.getItem(`premium1_${authUserForPoll}`) === "true";
-            const p2 = Boolean(data.hasPremium2) || localStorage.getItem(`premium2_${authUserForPoll}`) === "true";
+          if (pollRes.ok) {
+            const data = await pollRes.json();
+            // Server only — no localStorage fallback
+            const p1 = Boolean(data.hasPremium1);
+            const p2 = Boolean(data.hasPremium2);
             if ((activeVersion === 1 && p1) || (activeVersion === 2 && p2)) {
               setHasPremium1(p1);
               setHasPremium2(p2);
-              if (p1) localStorage.setItem(`premium1_${authUserForPoll}`, "true");
-              if (p2) localStorage.setItem(`premium2_${authUserForPoll}`, "true");
+              localStorage.setItem(`premium1_${authUserForPoll}`, String(p1));
+              localStorage.setItem(`premium2_${authUserForPoll}`, String(p2));
               if (typeof onPremiumUnlocked === "function") {
                 onPremiumUnlocked({ hasPremium1: p1, hasPremium2: p2 });
               }
@@ -268,25 +278,40 @@ const checkQr = () => {
           <IconButton onClick={() => setPdfUrl(null)}><MdClose /></IconButton>
         </Box>
         <DialogContent sx={{ p: 0, height: "80vh" }}>
-          {pdfUrl && <iframe src={getPdfSrc(pdfUrl)} style={{ width: "100%", height: "100%", border: "none" }} title="Portfolio Preview" />}
+          {pdfUrl && (
+            <iframe
+              src={getPdfSrc(pdfUrl)}
+              style={{ width: "100%", height: "100%", border: "none" }}
+              title="Portfolio Preview"
+            />
+          )}
         </DialogContent>
       </Dialog>
 
       {/* Main modal */}
-      <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 3, overflow: "hidden" } }}>
-
+      <Dialog
+        open={open}
+        onClose={onClose}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 3, overflow: "hidden" } }}
+      >
         {/* ── Header ───────────────────────────────────────────────────── */}
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", px: 3, pt: 2.5, pb: 1 }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             {step !== STEP_PICKER && (
-              <IconButton size="small" onClick={() => setStep(step === STEP_FORM ? STEP_QR : STEP_PICKER)} sx={{ mr: 0.5 }}>
+              <IconButton
+                size="small"
+                onClick={() => setStep(step === STEP_FORM ? STEP_QR : STEP_PICKER)}
+                sx={{ mr: 0.5 }}
+              >
                 <MdArrowBack />
               </IconButton>
             )}
             <Typography variant="h6" sx={{ fontWeight: 900 }}>
               {step === STEP_PICKER && "Choose Your Portfolio Version"}
-              {step === STEP_QR && `Pay for Premium ${activeVersion}`}
-              {step === STEP_FORM && "Payment Confirmation"}
+              {step === STEP_QR    && `Pay for Premium ${activeVersion}`}
+              {step === STEP_FORM  && "Payment Confirmation"}
             </Typography>
           </Box>
           <IconButton onClick={onClose}><MdClose /></IconButton>
@@ -297,6 +322,13 @@ const checkQr = () => {
           {/* ── STEP: PICKER ───────────────────────────────────────────── */}
           {step === STEP_PICKER && (
             <>
+              {/* Show loading indicator while server fetch is in progress */}
+              {premiumLoading && (
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5, opacity: 0.6 }}>
+                  <CircularProgress size={14} />
+                  <Typography variant="caption">Checking premium status…</Typography>
+                </Box>
+              )}
               {payErr && <Alert severity="error" sx={{ mb: 2 }}>{payErr}</Alert>}
               {payOk  && <Alert severity="success" sx={{ mb: 2 }}>{payOk}</Alert>}
               <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, gap: 2, alignItems: "stretch" }}>
@@ -304,42 +336,83 @@ const checkQr = () => {
                   <Box
                     key={plan.key}
                     sx={{
-                      flex: 1, border: `2px solid ${plan.paid ? plan.color : "rgba(0,0,0,0.12)"}`,
+                      flex: 1,
+                      border: `2px solid ${plan.paid ? plan.color : "rgba(0,0,0,0.12)"}`,
                       borderRadius: 3, p: 2.5, display: "flex", flexDirection: "column", gap: 1,
                       position: "relative",
-                      background: plan.paid ? `linear-gradient(135deg, ${plan.color}10, transparent)` : "transparent",
+                      background: plan.paid
+                        ? `linear-gradient(135deg, ${plan.color}10, transparent)`
+                        : "transparent",
                       transition: "box-shadow 0.2s",
                       "&:hover": { boxShadow: `0 4px 24px ${plan.color}30` },
                     }}
                   >
                     {plan.paid && plan.key !== "free" && (
-                      <Chip icon={<MdCheckCircle />} label="Unlocked" size="small" sx={{ position: "absolute", top: 12, right: 12, bgcolor: plan.color, color: "#fff", fontWeight: 700, "& .MuiChip-icon": { color: "#fff" } }} />
+                      <Chip
+                        icon={<MdCheckCircle />}
+                        label="Unlocked"
+                        size="small"
+                        sx={{
+                          position: "absolute", top: 12, right: 12,
+                          bgcolor: plan.color, color: "#fff", fontWeight: 700,
+                          "& .MuiChip-icon": { color: "#fff" },
+                        }}
+                      />
                     )}
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                       {plan.key !== "free" && <MdStar style={{ color: GOLD, fontSize: 20 }} />}
-                      <Typography variant="subtitle1" sx={{ fontWeight: 900, color: plan.color }}>{plan.label}</Typography>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 900, color: plan.color }}>
+                        {plan.label}
+                      </Typography>
                     </Box>
                     <Typography variant="h4" sx={{ fontWeight: 900 }}>
                       {plan.price}
-                      {plan.key !== "free" && <Typography component="span" variant="caption" sx={{ ml: 0.5 }}>one-time</Typography>}
+                      {plan.key !== "free" && (
+                        <Typography component="span" variant="caption" sx={{ ml: 0.5 }}>one-time</Typography>
+                      )}
                     </Typography>
                     <Box sx={{ flex: 1 }}>
-                      {plan.features.map((f) => <Typography key={f} variant="body2" sx={{ py: 0.25 }}>✓ {f}</Typography>)}
+                      {plan.features.map((f) => (
+                        <Typography key={f} variant="body2" sx={{ py: 0.25 }}>✓ {f}</Typography>
+                      ))}
                     </Box>
 
                     {plan.key !== "free" && (
                       plan.previewPdf
-                        ? <Tooltip title="Preview layout PDF"><IconButton size="small" sx={{ alignSelf: "flex-start", color: plan.color }} onClick={() => setPdfUrl(plan.previewPdf)}><MdVisibility /></IconButton></Tooltip>
-                        : <Typography variant="caption" sx={{ opacity: 0.4, fontSize: "0.7rem", alignSelf: "flex-start" }}>No preview available</Typography>
+                        ? (
+                          <Tooltip title="Preview layout PDF">
+                            <IconButton
+                              size="small"
+                              sx={{ alignSelf: "flex-start", color: plan.color }}
+                              onClick={() => setPdfUrl(plan.previewPdf)}
+                            >
+                              <MdVisibility />
+                            </IconButton>
+                          </Tooltip>
+                        )
+                        : (
+                          <Typography variant="caption" sx={{ opacity: 0.4, fontSize: "0.7rem", alignSelf: "flex-start" }}>
+                            No preview available
+                          </Typography>
+                        )
                     )}
 
                     {plan.paid ? (
-                      <Button variant="contained" fullWidth onClick={plan.onGenerate} sx={{ mt: 1, borderRadius: 999, fontWeight: 800, background: `linear-gradient(135deg, ${plan.color}, ${plan.color}cc)` }}>
+                      <Button
+                        variant="contained"
+                        fullWidth
+                        onClick={plan.onGenerate}
+                        sx={{
+                          mt: 1, borderRadius: 999, fontWeight: 800,
+                          background: `linear-gradient(135deg, ${plan.color}, ${plan.color}cc)`,
+                        }}
+                      >
                         Generate {plan.label}
                       </Button>
                     ) : (
                       <Button
-                        variant="outlined" fullWidth
+                        variant="outlined"
+                        fullWidth
                         startIcon={<MdLock />}
                         onClick={() => handlePayAndUnlock(plan.version)}
                         sx={{ mt: 1, borderRadius: 999, fontWeight: 800, borderColor: plan.color, color: plan.color }}
@@ -376,12 +449,22 @@ const checkQr = () => {
                     component="img"
                     src={`${qrUrls[activePlan.key]}?t=${Date.now()}`}
                     alt="UPI QR Code"
-                    sx={{ width: 220, height: 220, objectFit: "contain", borderRadius: 2, border: "1px solid rgba(0,0,0,0.08)", background: "#fff", p: 1 }}
+                    sx={{
+                      width: 220, height: 220, objectFit: "contain",
+                      borderRadius: 2, border: "1px solid rgba(0,0,0,0.08)",
+                      background: "#fff", p: 1,
+                    }}
                   />
                 ) : (
-                  <Box sx={{ width: 220, height: 220, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", borderRadius: 2, border: "1px dashed rgba(0,0,0,0.18)", gap: 1 }}>
+                  <Box sx={{
+                    width: 220, height: 220, display: "flex", flexDirection: "column",
+                    alignItems: "center", justifyContent: "center",
+                    borderRadius: 2, border: "1px dashed rgba(0,0,0,0.18)", gap: 1,
+                  }}>
                     <MdQrCode2 style={{ fontSize: 48, opacity: 0.25 }} />
-                    <Typography variant="caption" sx={{ opacity: 0.5, textAlign: "center" }}>QR not uploaded yet.<br />Contact support.</Typography>
+                    <Typography variant="caption" sx={{ opacity: 0.5, textAlign: "center" }}>
+                      QR not uploaded yet.<br />Contact support.
+                    </Typography>
                   </Box>
                 )}
 
@@ -392,10 +475,10 @@ const checkQr = () => {
 
               {/* Pay via Razorpay — coming soon */}
               <Button
-                variant="outlined" fullWidth
+                variant="outlined"
+                fullWidth
                 sx={{ borderRadius: 999, fontWeight: 800, maxWidth: 340, borderColor: activePlan.color, color: activePlan.color }}
                 onClick={() => {
-                  // coming soon popup
                   setPayErr("");
                   setPayOk("🚀 Razorpay integration coming soon!");
                 }}
@@ -406,8 +489,12 @@ const checkQr = () => {
 
               {/* I've Paid button */}
               <Button
-                variant="contained" fullWidth
-                sx={{ borderRadius: 999, fontWeight: 800, maxWidth: 340, background: `linear-gradient(135deg, ${activePlan.color}, ${activePlan.color}cc)` }}
+                variant="contained"
+                fullWidth
+                sx={{
+                  borderRadius: 999, fontWeight: 800, maxWidth: 340,
+                  background: `linear-gradient(135deg, ${activePlan.color}, ${activePlan.color}cc)`,
+                }}
                 onClick={() => { setPayOk(""); setStep(STEP_FORM); }}
               >
                 ✅ I've Paid — Submit Details
@@ -421,17 +508,21 @@ const checkQr = () => {
 
               {formDone ? (
                 /* ── Success state ── */
-              <Box sx={{ textAlign: "center", py: 4, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                <Box sx={{ textAlign: "center", py: 4, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
                   <Box sx={{ fontSize: 64 }}>🎉</Box>
                   <Typography variant="h6" sx={{ fontWeight: 900 }}>Request Submitted!</Typography>
                   <Typography variant="body2" sx={{ opacity: 0.7, maxWidth: 340 }}>
-                    Your payment details have been sent for review. Once approved, your <strong>Premium {activeVersion}</strong> portfolio will be unlocked automatically.
+                    Your payment details have been sent for review. Once approved, your{" "}
+                    <strong>Premium {activeVersion}</strong> portfolio will be unlocked automatically.
                   </Typography>
-                  {/* Show Generate button if already approved */}
+
                   {((activeVersion === 1 && hasPremium1) || (activeVersion === 2 && hasPremium2)) ? (
                     <Button
                       variant="contained"
-                      sx={{ borderRadius: 999, mt: 1, fontWeight: 800, background: `linear-gradient(135deg, ${activePlan.color}, ${activePlan.color}cc)` }}
+                      sx={{
+                        borderRadius: 999, mt: 1, fontWeight: 800,
+                        background: `linear-gradient(135deg, ${activePlan.color}, ${activePlan.color}cc)`,
+                      }}
                       onClick={activeVersion === 1 ? onGeneratePremium1 : onGeneratePremium2}
                     >
                       ✅ Generate Premium {activeVersion} Now
@@ -443,18 +534,22 @@ const checkQr = () => {
                         <Typography variant="caption">Waiting for approval…</Typography>
                       </Box>
                       <Button
-                        variant="outlined" size="small"
+                        variant="outlined"
+                        size="small"
                         sx={{ borderRadius: 999, borderColor: activePlan.color, color: activePlan.color }}
-                        onClick={() => {
-                          if (typeof onGoToStatus === "function") onGoToStatus();
-                        }}
+                        onClick={() => { if (typeof onGoToStatus === "function") onGoToStatus(); }}
                         startIcon={premiumLoading ? <CircularProgress size={12} color="inherit" /> : null}
                       >
                         Check Status
                       </Button>
                     </Box>
                   )}
-                  <Button variant="outlined" sx={{ borderRadius: 999, borderColor: "rgba(0,0,0,0.2)", color: "text.secondary" }} onClick={onClose}>
+
+                  <Button
+                    variant="outlined"
+                    sx={{ borderRadius: 999, borderColor: "rgba(0,0,0,0.2)", color: "text.secondary" }}
+                    onClick={onClose}
+                  >
                     Close
                   </Button>
                 </Box>
@@ -536,7 +631,10 @@ const checkQr = () => {
                     disabled={formSubmitting}
                     startIcon={formSubmitting ? <CircularProgress size={16} color="inherit" /> : <MdSend />}
                     onClick={handleFormSubmit}
-                    sx={{ borderRadius: 999, fontWeight: 800, background: `linear-gradient(135deg, ${activePlan.color}, ${activePlan.color}cc)` }}
+                    sx={{
+                      borderRadius: 999, fontWeight: 800,
+                      background: `linear-gradient(135deg, ${activePlan.color}, ${activePlan.color}cc)`,
+                    }}
                   >
                     {formSubmitting ? "Submitting…" : "Submit Payment Details"}
                   </Button>
