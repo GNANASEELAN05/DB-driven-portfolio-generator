@@ -148,11 +148,12 @@ export default function AdminLogin() {
 
       localStorage.removeItem("token");
       sessionStorage.clear();
+      const serverUserLower = serverDisplay.trim().toLowerCase();
       localStorage.setItem("token", token);
-      localStorage.setItem("auth_user", resolvedUsername);
+      localStorage.setItem("auth_user", serverUserLower);
       localStorage.setItem("display_name", serverDisplay);
 
-      window.location.replace(`/${resolvedUsername}/adminpanel`);
+      window.location.replace(`/${serverUserLower}/adminpanel`);
     } catch (error) {
       setErr("Invalid username or password");
     } finally {
