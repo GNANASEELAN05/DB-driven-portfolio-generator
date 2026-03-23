@@ -102,6 +102,10 @@ export default function VersionPickerModal({
         hasServerResponded.current = true;
         localStorage.setItem(`premium1_${authUser}`, "false");
         localStorage.setItem(`premium2_${authUser}`, "false");
+        // Also notify parent to clear its stale props
+        if (typeof onPremiumUnlocked === "function") {
+          onPremiumUnlocked({ hasPremium1: false, hasPremium2: false });
+        }
       }
     } catch {
       // Network error: fall back to props so UI isn't broken while offline
@@ -157,9 +161,9 @@ export default function VersionPickerModal({
         setFormDone(false);
         setForm({ fullName: "", phone: "", paymentId: "", paidVia: "", paidFromMobile: "" });
         setFormErr("");
-        // Reset to props so next open shows something before server responds
-        setHasPremium1(Boolean(hasPremium1Prop));
-        setHasPremium2(Boolean(hasPremium2Prop));
+        // Always reset to false — server will confirm on next open
+        setHasPremium1(false);
+        setHasPremium2(false);
       }, 300);
     }
   }, [open]);
