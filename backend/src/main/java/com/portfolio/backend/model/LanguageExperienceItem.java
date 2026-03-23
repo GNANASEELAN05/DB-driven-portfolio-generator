@@ -15,14 +15,14 @@ public class LanguageExperienceItem {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /**
-     * Multi-tenant key
-     */
     @Column(nullable = false)
     private String ownerUsername;
 
     private String language;
-    private String experience; // e.g., "2 years"
+    private String experience; // e.g., "Advanced · 3 years"
+
+    @Column(columnDefinition = "TEXT")
+    private String notes;
 
     public Long getId() { return id; }
 
@@ -30,9 +30,13 @@ public class LanguageExperienceItem {
     public void setOwnerUsername(String ownerUsername) { this.ownerUsername = ownerUsername; }
 
     public String getLanguage() { return language; }
+    public void setLanguage(String language) { this.language = language; }
+
     public String getExperience() { return experience; }
+    public void setExperience(String experience) { this.experience = experience; }
+
+    public String getNotes() { return notes; }
+    public void setNotes(String notes) { this.notes = notes; }
 
     public void setId(Long id) { this.id = id; }
-    public void setLanguage(String language) { this.language = language; }
-    public void setExperience(String experience) { this.experience = experience; }
 }

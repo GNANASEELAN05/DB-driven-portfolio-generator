@@ -173,15 +173,43 @@ public class PortfolioController {
     @PutMapping("/languages")
     @Transactional
     public List<LanguageExperienceItem> saveLanguages(@PathVariable String username,
-                                                      @RequestBody List<LanguageExperienceItem> items) {
+                                                      @RequestBody List<Map<String, Object>> items) {
         assertOwner(username);
         String u = norm(username);
         languageRepo.deleteByOwnerUsername(u);
-        for (LanguageExperienceItem l : items) {
+
+        List<LanguageExperienceItem> toSave = new ArrayList<>();
+        for (Map<String, Object> map : items) {
+            LanguageExperienceItem l = new LanguageExperienceItem();
             l.setId(null);
             l.setOwnerUsername(u);
+
+            // language field
+            String language = map.get("language") != null ? String.valueOf(map.get("language")) : "";
+            l.setLanguage(language);
+
+            // Build experience string from level + years, or use raw experience if sent
+            String level   = map.get("level")      != null ? String.valueOf(map.get("level"))      : "";
+            String years   = map.get("years")       != null ? String.valueOf(map.get("years"))       : "";
+            String expRaw  = map.get("experience")  != null ? String.valueOf(map.get("experience"))  : "";
+
+            if (!expRaw.isBlank() && !"null".equals(expRaw)) {
+                l.setExperience(expRaw);
+            } else if (!level.isBlank() && !years.isBlank() && !"null".equals(level) && !"null".equals(years)) {
+                l.setExperience(level + " · " + years + ("1".equals(years) ? " year" : " years"));
+            } else if (!level.isBlank() && !"null".equals(level)) {
+                l.setExperience(level);
+            } else {
+                l.setExperience("");
+            }
+
+            // notes field
+            String notes = map.get("notes") != null ? String.valueOf(map.get("notes")) : "";
+            l.setNotes("null".equals(notes) ? "" : notes);
+
+            toSave.add(l);
         }
-        return languageRepo.saveAll(items);
+        return languageRepo.saveAll(toSave);
     }
 
     @PutMapping("/education")
