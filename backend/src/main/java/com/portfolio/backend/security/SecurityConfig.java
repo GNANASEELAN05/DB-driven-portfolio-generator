@@ -45,6 +45,7 @@ public class SecurityConfig {
 
                 // ── auth ───────────────────────────────────────────────────
                 .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/auth/username-by-email").permitAll()
 
                 // ── master / controller login ──────────────────────────────
                 .requestMatchers("/api/master-admin/login").permitAll()

@@ -94,6 +94,7 @@ public class MasterAdminController {
                 dto.put("enabled",     u.isEnabled());
                 dto.put("hasPremium1", u.isHasPremium1());
                 dto.put("hasPremium2", u.isHasPremium2());
+                dto.put("phone",       u.getPhone());
                 dto.put("createdAt",   u.getCreatedAt());
                 dto.put("lastLogin",   u.getLastLogin());
                 return dto;

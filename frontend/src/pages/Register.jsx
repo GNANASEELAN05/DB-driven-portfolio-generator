@@ -15,7 +15,9 @@ export default function Register() {
     }
   }, []);
 
-  const [username, setUsername] = useState(""); // keep original case
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
@@ -23,22 +25,21 @@ export default function Register() {
   const onSubmit = async (e) => {
     e.preventDefault();
     setErr("");
+
+    if (!username.trim()) { setErr("Username is required."); return; }
+    if (!email.trim())    { setErr("Email is required."); return; }
+    if (!password.trim()) { setErr("Password is required."); return; }
+
     setLoading(true);
-
     try {
-      const typed = username.trim();
-      const uLower = typed.toLowerCase(); // only for URL routing
+      const typed  = username.trim();
+      const uLower = typed.toLowerCase();
 
-      // ✅ IMPORTANT: send ORIGINAL to backend so it stores correct case
-      const res = await registerUser(typed, password);
+      const res = await registerUser(typed, password, email.trim(), phone.trim());
 
       const token =
-        res &&
-        res.data &&
-        typeof res.data.token === "string" &&
-        res.data.token.trim().length > 0
-          ? res.data.token
-          : null;
+        res?.data?.token && typeof res.data.token === "string" && res.data.token.trim().length > 0
+          ? res.data.token : null;
 
       if (!token) {
         setErr("Registration failed. Please try again.");
@@ -46,24 +47,22 @@ export default function Register() {
         return;
       }
 
-      // ✅ backend returns original stored username (same as typed)
       const serverDisplay =
         res?.data?.username && typeof res.data.username === "string"
-          ? res.data.username
-          : typed;
+          ? res.data.username : typed;
 
       localStorage.removeItem("token");
       sessionStorage.clear();
       localStorage.setItem("token", token);
-      localStorage.setItem("auth_user", uLower);           // lowercase for URL
-      localStorage.setItem("display_name", serverDisplay); // original for top UI
+      localStorage.setItem("auth_user", uLower);
+      localStorage.setItem("display_name", serverDisplay);
 
       window.location.replace(`/${uLower}/adminpanel`);
     } catch (error) {
       const msg =
         error?.response?.data && typeof error.response.data === "string"
           ? error.response.data
-          : "Registration failed. Try a different username.";
+          : "Registration failed. Try a different username or email.";
       setErr(msg);
     } finally {
       setLoading(false);
@@ -98,14 +97,10 @@ export default function Register() {
             <Stack alignItems="center" spacing={1}>
               <Box
                 sx={{
-                  width: 70,
-                  height: 70,
-                  borderRadius: "50%",
+                  width: 70, height: 70, borderRadius: "50%",
                   background: "linear-gradient(135deg,#8b5cf6,#22d3ee)",
-                  display: "grid",
-                  placeItems: "center",
-                  color: "#fff",
-                  fontSize: 32,
+                  display: "grid", placeItems: "center",
+                  color: "#fff", fontSize: 32,
                 }}
               >
                 <MdPersonAdd />
@@ -113,12 +108,9 @@ export default function Register() {
 
               <Typography
                 sx={{
-                  fontWeight: 900,
-                  fontSize: 28,
-                  textAlign: "center",
+                  fontWeight: 900, fontSize: 28, textAlign: "center",
                   background: "linear-gradient(90deg,#a78bfa,#22d3ee)",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
+                  WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
                 }}
               >
                 Portfolio Generator
@@ -132,9 +124,7 @@ export default function Register() {
             </Stack>
 
             {err && (
-              <Alert severity="error" sx={{ borderRadius: 3 }}>
-                {err}
-              </Alert>
+              <Alert severity="error" sx={{ borderRadius: 3 }}>{err}</Alert>
             )}
 
             <Box component="form" onSubmit={onSubmit}>
@@ -145,6 +135,26 @@ export default function Register() {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   helperText="Spaces allowed. URL auto converts to lowercase"
+                  sx={inputStyle}
+                />
+
+                <TextField
+                  label="Email Address"
+                  type="email"
+                  fullWidth
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  helperText="Used for login and shown in your contact section"
+                  sx={inputStyle}
+                />
+
+                <TextField
+                  label="Phone Number (optional)"
+                  type="tel"
+                  fullWidth
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  helperText="Shown in your contact section (can be edited later)"
                   sx={inputStyle}
                 />
 
@@ -163,11 +173,7 @@ export default function Register() {
                   startIcon={<MdPersonAdd />}
                   disabled={loading}
                   sx={{
-                    mt: 1,
-                    py: 1.4,
-                    fontWeight: 900,
-                    borderRadius: 3,
-                    fontSize: 16,
+                    mt: 1, py: 1.4, fontWeight: 900, borderRadius: 3, fontSize: 16,
                     background: "linear-gradient(135deg,#8b5cf6,#22d3ee)",
                     boxShadow: "0 10px 30px rgba(99,102,241,0.5)",
                   }}
@@ -200,19 +206,9 @@ const inputStyle = {
     background: "rgba(255,255,255,0.08)",
     color: "#fff",
   },
-  "& .MuiInputLabel-root": {
-    color: "#aaa",
-  },
-  "& .MuiFormHelperText-root": {
-    color: "rgba(255,255,255,0.55)",
-  },
-  "& .MuiOutlinedInput-notchedOutline": {
-    borderColor: "rgba(255,255,255,0.25)",
-  },
-  "&:hover .MuiOutlinedInput-notchedOutline": {
-    borderColor: "#8b5cf6",
-  },
-  "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-    borderColor: "#22d3ee",
-  },
+  "& .MuiInputLabel-root": { color: "#aaa" },
+  "& .MuiFormHelperText-root": { color: "rgba(255,255,255,0.55)" },
+  "& .MuiOutlinedInput-notchedOutline": { borderColor: "rgba(255,255,255,0.25)" },
+  "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "#8b5cf6" },
+  "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#22d3ee" },
 };

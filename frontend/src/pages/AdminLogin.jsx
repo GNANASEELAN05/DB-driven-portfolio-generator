@@ -87,14 +87,45 @@ export default function AdminLogin() {
         return;
       }
 
-      // ── Normal admin login ──────────────────────────────────
-      if (expected && uLower !== expected) {
+      // ── Normal admin login — accept username OR email ───────
+      // If input looks like an email, resolve it to username first
+      let resolvedUsername = uLower;
+      if (typed.includes("@") && !typed.startsWith(CONTROLLER_PREFIX)) {
+        try {
+          const API_BASE =
+            import.meta.env.VITE_API_URL ||
+            "https://db-driven-portfolio-generator.onrender.com/api";
+          const lookupRes = await fetch(
+            `${API_BASE}/auth/username-by-email?email=${encodeURIComponent(typed)}`,
+          );
+          if (lookupRes.ok) {
+            const lookupData = await lookupRes.json();
+            if (lookupData?.username) {
+              resolvedUsername = lookupData.username.toLowerCase();
+            } else {
+              setErr("No account found with that email.");
+              setLoading(false);
+              return;
+            }
+          } else {
+            setErr("No account found with that email.");
+            setLoading(false);
+            return;
+          }
+        } catch {
+          setErr("Could not resolve email. Please try with username.");
+          setLoading(false);
+          return;
+        }
+      }
+
+      if (expected && resolvedUsername !== expected) {
         setErr(`Please login using your own URL username: ${expected}`);
         setLoading(false);
         return;
       }
 
-      const res = await adminLogin(uLower, password);
+      const res = await adminLogin(resolvedUsername, password);
 
       const token =
         res &&
@@ -118,10 +149,10 @@ export default function AdminLogin() {
       localStorage.removeItem("token");
       sessionStorage.clear();
       localStorage.setItem("token", token);
-      localStorage.setItem("auth_user", uLower);
+      localStorage.setItem("auth_user", resolvedUsername);
       localStorage.setItem("display_name", serverDisplay);
 
-      window.location.replace(`/${uLower}/adminpanel`);
+      window.location.replace(`/${resolvedUsername}/adminpanel`);
     } catch (error) {
       setErr("Invalid username or password");
     } finally {
@@ -227,10 +258,11 @@ export default function AdminLogin() {
             <Box component="form" onSubmit={onSubmit}>
               <Stack spacing={2}>
                 <TextField
-                  label="Username"
+                  label="Username or Email"
                   fullWidth
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
+                  helperText="Enter your username or registered email"
                   sx={inputStyle}
                 />
 

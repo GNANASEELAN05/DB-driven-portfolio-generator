@@ -233,7 +233,13 @@ const [certPreview, setCertPreview] = useState({ open: false, title: "", blobUrl
                   {profile.about && <div className="cd-info-block"><div className="cd-info-title">About</div><div className="cd-info-text">{profile.about}</div></div>}
                   {profile.tagline && <div className="cd-info-block"><div className="cd-info-title">Tagline</div><div className="cd-info-text">{profile.tagline}</div></div>}
                   <div className="cd-info-grid">
-                    {[["Email", profile.emailPublic, Icon.mail], ["Location", profile.location, Icon.globe], ["Initials", profile.initials, Icon.hash]].filter(([, v]) => v).map(([label, val, icon]) => (
+                    {[
+                      ["Account Email", user?.email, Icon.mail],
+                      ["Public Email",  profile.emailPublic, Icon.mail],
+                      ["Phone",         user?.phone || socials?.phone, Icon.hash],
+                      ["Location",      profile.location, Icon.globe],
+                      ["Initials",      profile.initials, Icon.hash],
+                    ].filter(([, v]) => v).map(([label, val, icon]) => (
                       <div className="cd-info-row" key={label}>
                         <span className="cd-info-icon">{icon}</span>
                         <span className="cd-info-key">{label}</span>

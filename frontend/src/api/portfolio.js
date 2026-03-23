@@ -107,5 +107,5 @@ export const deleteResumeById = (username, id) =>
 export const adminLogin = (username, password) =>
   http.post("/auth/login", { username, password });
 
-export const registerUser = (username, password) =>
-  http.post("/auth/register", { username, password });
+export const registerUser = (username, password, email, phone) =>
+  http.post("/auth/register", { username, password, email, phone: phone || "" });

@@ -25,6 +25,10 @@ public class User {
     @Column(unique = true)
     private String email;
 
+    // ── Phone number ──────────────────────────────────────────────────────────
+    @Column(name = "phone")
+    private String phone;
+
     // ── Account enabled flag ─────────────────────────────────────────────────
     @Column(nullable = false, columnDefinition = "boolean default true")
     private boolean enabled = true;
@@ -73,6 +77,7 @@ public class User {
     public LocalDateTime getLastLogin()    { return lastLogin; }
     public boolean       isHasPremium1()   { return hasPremium1; }
     public boolean       isHasPremium2()   { return hasPremium2; }
+    public String        getPhone()        { return phone; }
 
     // ── Setters ──────────────────────────────────────────────────────────────
 
@@ -86,4 +91,5 @@ public class User {
     public void setLastLogin(LocalDateTime v)    { this.lastLogin = v; }
     public void setHasPremium1(boolean v)        { this.hasPremium1 = v; }
     public void setHasPremium2(boolean v)        { this.hasPremium2 = v; }
+    public void setPhone(String phone)           { this.phone = phone; }
 }
