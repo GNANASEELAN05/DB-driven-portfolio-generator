@@ -16,7 +16,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
+
 import java.util.Map;
 
 @RestController
@@ -147,8 +147,8 @@ public class AuthController {
             return ResponseEntity.status(401).body("Invalid username or password");
         }
 
-        // ── Update last login timestamp ───────────────────────────────────────
-        user.setLastLogin(LocalDateTime.now());
+        // ── Update last login timestamp (UTC) ─────────────────────────────────
+        user.setLastLogin(java.time.LocalDateTime.now(java.time.ZoneOffset.UTC));
         userRepository.save(user);
 
         String role = user.getRole();
