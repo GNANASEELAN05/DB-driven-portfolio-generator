@@ -37,18 +37,14 @@ function apiFetchRaw(path, options = {}) {
 const formatDate = (iso) => {
   if (!iso) return "—";
   try {
-    const normalized = iso && !iso.endsWith("Z") && !iso.includes("+") ? iso + "Z" : iso;
-    return new Date(normalized).toLocaleDateString("en-IN", {
+    return new Date(iso).toLocaleDateString("en-IN", {
       day: "2-digit", month: "short", year: "numeric",
     });
   } catch { return iso; }
 };
 const timeAgo = (iso) => {
   if (!iso) return "—";
-  // Append 'Z' if no timezone info so JS parses it as UTC, not local time
-  const normalized = iso && !iso.endsWith("Z") && !iso.includes("+") ? iso + "Z" : iso;
-  const diff = Date.now() - new Date(normalized).getTime();
-  if (diff < 0) return "Just now";
+  const diff = Date.now() - new Date(iso).getTime();
   const m = Math.floor(diff / 60000);
   if (m < 1) return "Just now";
   if (m < 60) return `${m}m ago`;
