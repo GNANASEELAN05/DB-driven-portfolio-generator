@@ -184,28 +184,30 @@ public class PortfolioController {
             l.setId(null);
             l.setOwnerUsername(u);
 
-            // language field
+            // language
             String language = map.get("language") != null ? String.valueOf(map.get("language")) : "";
-            l.setLanguage(language);
+            l.setLanguage("null".equals(language) ? "" : language);
 
-            // Build experience string from level + years, or use raw experience if sent
-            String level   = map.get("level")      != null ? String.valueOf(map.get("level"))      : "";
-            String years   = map.get("years")       != null ? String.valueOf(map.get("years"))       : "";
-            String expRaw  = map.get("experience")  != null ? String.valueOf(map.get("experience"))  : "";
+            // level — save separately
+            String level = map.get("level") != null ? String.valueOf(map.get("level")) : "";
+            l.setLevel("null".equals(level) ? "" : level);
 
-            if (!expRaw.isBlank() && !"null".equals(expRaw)) {
-                l.setExperience(expRaw);
-            } else if (!level.isBlank() && !years.isBlank() && !"null".equals(level) && !"null".equals(years)) {
+            // years — save separately
+            String years = map.get("years") != null ? String.valueOf(map.get("years")) : "";
+            l.setYears("null".equals(years) ? "" : years);
+
+            // notes — save separately
+            String notes = map.get("notes") != null ? String.valueOf(map.get("notes")) : "";
+            l.setNotes("null".equals(notes) ? "" : notes);
+
+            // also build combined experience string for backward compat
+            if (!level.isBlank() && !"null".equals(level) && !years.isBlank() && !"null".equals(years)) {
                 l.setExperience(level + " · " + years + ("1".equals(years) ? " year" : " years"));
             } else if (!level.isBlank() && !"null".equals(level)) {
                 l.setExperience(level);
             } else {
                 l.setExperience("");
             }
-
-            // notes field
-            String notes = map.get("notes") != null ? String.valueOf(map.get("notes")) : "";
-            l.setNotes("null".equals(notes) ? "" : notes);
 
             toSave.add(l);
         }

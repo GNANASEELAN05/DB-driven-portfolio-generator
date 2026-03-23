@@ -18,8 +18,13 @@ public class LanguageExperienceItem {
     @Column(nullable = false)
     private String ownerUsername;
 
-    private String language;
-    private String experience; // e.g., "Advanced · 3 years"
+private String language;
+
+    private String level;   // e.g., "Beginner" / "Intermediate" / "Advanced"
+
+    private String years;   // e.g., "3"
+
+    private String experience; // combined legacy field — kept for backward compat
 
     @Column(columnDefinition = "TEXT")
     private String notes;
@@ -31,6 +36,12 @@ public class LanguageExperienceItem {
 
     public String getLanguage() { return language; }
     public void setLanguage(String language) { this.language = language; }
+
+    public String getLevel() { return level; }
+    public void setLevel(String level) { this.level = level; }
+
+    public String getYears() { return years; }
+    public void setYears(String years) { this.years = years; }
 
     public String getExperience() { return experience; }
     public void setExperience(String experience) { this.experience = experience; }

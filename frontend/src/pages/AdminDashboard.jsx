@@ -1341,10 +1341,19 @@ const saveEditSkill = (i) => {
 
   const openLangEdit = (l) => {
     setLangEditingId(l.id);
+    // Parse level+years from separate fields, or fall back to splitting experience string
+    let level = l.level || "";
+    let years = l.years ? Number(l.years) : 0;
+    if (!level && l.experience) {
+      // legacy: "Advanced · 3 years" → split back
+      const parts = l.experience.split(" · ");
+      if (parts.length >= 1) level = parts[0].trim();
+      if (parts.length >= 2) years = parseInt(parts[1]) || 1;
+    }
     setLangForm({
       language: l.language || l.name || "",
-      level: l.level || "Beginner",
-      years: Number(l.years || 1),
+      level: level || "Beginner",
+      years: years || 1,
       notes: l.notes || "",
     });
     setLangDlgOpen(true);
