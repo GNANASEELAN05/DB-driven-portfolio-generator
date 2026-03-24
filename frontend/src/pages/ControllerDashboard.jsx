@@ -1123,60 +1123,56 @@ const [certPreview, setCertPreview] = useState({ open: false, title: "", blobUrl
 // ── PDF Preview Modal ──
 function PdfPreviewModal({ open, title, url, onClose, dark }) {
   if (!open) return null;
-  const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
   return (
     <div
       style={{
         position: "fixed", inset: 0, zIndex: 400,
-        background: "rgba(5,7,20,0.85)",
-        backdropFilter: "blur(10px)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        padding: "20px",
+        background: "rgba(5,7,20,0.88)",
+        backdropFilter: "blur(14px)",
+        display: "flex",
+        alignItems: "flex-start",
+        justifyContent: "center",
+        padding: "70px 20px 20px", // pushes below top bar
+        overflowY: "auto",
         animation: "cd-fade-in 0.2s ease",
       }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div style={{
         width: "100%", maxWidth: 860,
-        height: "88vh",
-        background: dark ? "#0d0f28" : "#ffffff",
-        border: "1px solid rgba(99,102,241,0.3)",
+        height: "calc(100vh - 90px)",
         borderRadius: 20,
-        display: "flex", flexDirection: "column",
         overflow: "hidden",
+        display: "flex", flexDirection: "column",
         animation: "cd-modal-in 0.28s cubic-bezier(0.22,1,0.36,1)",
-        boxShadow: "0 32px 80px rgba(0,0,0,0.5)",
+        boxShadow: "0 32px 80px rgba(0,0,0,0.7)",
+        position: "relative",
+        alignItems: "stretch",
+        minHeight: 0,
       }}>
-        {/* Header */}
-        <div style={{
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          padding: "14px 20px",
-          borderBottom: `1px solid ${dark ? "rgba(99,102,241,0.18)" : "rgba(99,102,241,0.12)"}`,
-          background: dark ? "rgba(13,15,40,0.9)" : "rgba(255,255,255,0.95)",
-          flexShrink: 0,
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, color: dark ? "#a5b4fc" : "#4f46e5" }}>
-            {Icon.pdf}
-            <span style={{ fontWeight: 800, fontSize: 14, color: dark ? "#e2e8f0" : "#1e293b" }}>{title}</span>
-          </div>
-          <button
-            onClick={onClose}
-            style={{
-              width: 30, height: 30, borderRadius: 8,
-              background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.18)",
-              color: dark ? "rgba(165,180,252,0.7)" : "#6366f1",
-              display: "grid", placeItems: "center", cursor: "pointer",
-            }}
-          >{Icon.close}</button>
-        </div>
- 
-        {/* PDF iframe */}
-        <div style={{ flex: 1, overflow: "hidden", background: "#000" }}>
+        {/* Floating close button — top right */}
+        <button
+          onClick={onClose}
+          style={{
+            position: "absolute", top: 14, right: 14, zIndex: 10,
+            width: 34, height: 34, borderRadius: 9,
+            background: "rgba(13,15,40,0.85)",
+            border: "1px solid rgba(165,180,252,0.25)",
+            color: "rgba(165,180,252,0.85)",
+            display: "grid", placeItems: "center", cursor: "pointer",
+            backdropFilter: "blur(8px)",
+            boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
+            transition: "all 0.15s",
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = "rgba(244,63,94,0.18)"; e.currentTarget.style.borderColor = "rgba(244,63,94,0.45)"; e.currentTarget.style.color = "#f87171"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "rgba(13,15,40,0.85)"; e.currentTarget.style.borderColor = "rgba(165,180,252,0.25)"; e.currentTarget.style.color = "rgba(165,180,252,0.85)"; }}
+        >{Icon.close}</button>
+
+        {/* PDF fills the entire box — no header, no footer */}
+        <div style={{ flex: 1, overflow: "hidden", background: "#fff", minHeight: 0 }}>
           {url ? (
             <iframe
-              src={isMobile
-                ? `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`
-                : `${url}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
+              src={`${url}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
               style={{ width: "100%", height: "100%", border: "none", display: "block" }}
               title={title}
             />
@@ -1186,54 +1182,15 @@ function PdfPreviewModal({ open, title, url, onClose, dark }) {
             </div>
           )}
         </div>
- 
-        {/* Bottom bar */}
-        <div style={{
-          display: "flex", alignItems: "center", justifyContent: "center",
-          padding: "12px 20px",
-          borderTop: `1px solid ${dark ? "rgba(99,102,241,0.18)" : "rgba(99,102,241,0.12)"}`,
-          background: dark ? "rgba(13,15,40,0.9)" : "rgba(255,255,255,0.95)",
-          flexShrink: 0, gap: 10,
-        }}>
-          {url && (
-            <a
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: "inline-flex", alignItems: "center", gap: 6,
-                padding: "7px 16px", borderRadius: 8,
-                background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.28)",
-                color: dark ? "#a5b4fc" : "#4f46e5",
-                fontSize: 12.5, fontWeight: 700, textDecoration: "none", transition: "all 0.15s",
-              }}
-            >
-              {Icon.eye} Open in new tab
-            </a>
-          )}
-          <button
-            onClick={onClose}
-            style={{
-              display: "inline-flex", alignItems: "center", gap: 6,
-              padding: "7px 16px", borderRadius: 8,
-              background: "rgba(244,63,94,0.08)", border: "1px solid rgba(244,63,94,0.2)",
-              color: dark ? "rgba(253,164,175,0.8)" : "#e11d48",
-              fontSize: 12.5, fontWeight: 700, cursor: "pointer", transition: "all 0.15s",
-            }}
-          >
-            {Icon.close} Close
-          </button>
-        </div>
       </div>
     </div>
   );
 }
 
 // ── PDF Upload Section ──
-function PdfUploadPage({ dark }) {
+function PdfUploadPage({ dark, onPreviewChange }) {
   const [pdfs, setPdfs] = useState({ premium1: [], premium2: [] });
   const [uploading, setUploading] = useState({ premium1: false, premium2: false });
-  const [previewModal, setPreviewModal] = useState({ open: false, title: "", url: "" });
   const [err, setErr] = useState("");
   const [ok, setOk] = useState("");
   const [loading, setLoading] = useState(true);
@@ -1293,7 +1250,7 @@ function PdfUploadPage({ dark }) {
 
   const openPreview = (tier, item) => {
     const url = `${API_BASE}/master-admin/preview-pdfs/${item.id}/view`;
-    setPreviewModal({ open: true, title: `${tier === "premium1" ? "Premium 1" : "Premium 2"} — ${item.fileName}`, url });
+    onPreviewChange({ open: true, title: `${tier === "premium1" ? "Premium 1" : "Premium 2"} — ${item.fileName}`, url });
   };
 
   const renderTier = (tier, label, accentClass) => {
@@ -1361,7 +1318,6 @@ function PdfUploadPage({ dark }) {
         {renderTier("premium1", "Premium 1 Preview PDF", "cd-tier-p1")}
         {renderTier("premium2", "Premium 2 Preview PDF", "cd-tier-p2")}
       </div>
-      <PdfPreviewModal open={previewModal.open} title={previewModal.title} url={previewModal.url} onClose={() => setPreviewModal({ open: false, title: "", url: "" })} dark={dark} />
     </div>
   );
 }
@@ -1383,6 +1339,7 @@ function UpiQrPage({ dark, onPreviewChange }) {
   const previewPortalRef = React.useRef(document.body);
 
   const fetchList = useCallback(async () => {
+    if (!localStorage.getItem("controller_token")) return;
     setLoading(true);
     try {
       const res = await apiFetch("/master-admin/upi-qr");
@@ -1657,6 +1614,7 @@ function RequestsPage({ dark, onDetailChange, onRejectChange }) {
   const [acting, setActing]     = useState({});
 
   const fetchRequests = useCallback(async () => {
+    if (!localStorage.getItem("controller_token")) return;
     setLoading(true); setErr("");
     try {
       const res = await apiFetch("/master-admin/payment-requests");
@@ -1666,7 +1624,6 @@ function RequestsPage({ dark, onDetailChange, onRejectChange }) {
     } catch (e) { setErr("Failed to load requests."); }
     finally { setLoading(false); }
   }, []);
-
   useEffect(() => { fetchRequests(); }, [fetchRequests]);
 
   const handleApprove = async (id) => {
@@ -2028,6 +1985,7 @@ export default function ControllerDashboard() {
   const [rejectDetail, setRejectDetail] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null); // holds user object to delete
   const [upiPreview, setUpiPreview] = useState({ open: false, tier: "", url: "" });
+  const [pdfPreview, setPdfPreview] = useState({ open: false, title: "", url: "" });
 
   useEffect(() => {
     document.title = "Controller Dashboard";
@@ -2363,7 +2321,7 @@ const pageLabel = { dashboard: "Overview", users: "Registered Users", pdfs: "Pre
           )}
 
           {/* ── PDF UPLOAD PAGE ── */}
-          {activePage === "pdfs" && <PdfUploadPage dark={dark} />}
+          {activePage === "pdfs" && <PdfUploadPage dark={dark} onPreviewChange={setPdfPreview} />}
 
           {/* ── UPI QR PAGE ── */}
           {activePage === "upi" && <UpiQrPage dark={dark} onPreviewChange={setUpiPreview} />}
@@ -2467,6 +2425,9 @@ const pageLabel = { dashboard: "Overview", users: "Registered Users", pdfs: "Pre
           onConfirm={(reason) => { rejectDetail.onConfirm(reason); setRejectDetail(null); }}
         />
       )}
+
+{/* PDF Preview Modal — root level to avoid stacking context clipping */}
+      <PdfPreviewModal open={pdfPreview.open} title={pdfPreview.title} url={pdfPreview.url} onClose={() => setPdfPreview({ open: false, title: "", url: "" })} dark={dark} />
 
       {/* UPI QR Preview Modal — root level to avoid stacking context clipping */}
       {upiPreview.open && (
