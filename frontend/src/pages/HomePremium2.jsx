@@ -2719,61 +2719,6 @@ case "contact":
             <Box className="csb-watermark">✉</Box>
           </Box>
 
-          {/* ── MESSAGE FORM CARD ── */}
-          <Box className="contact-form-card">
-            <Box className="cfc-prism" />
-            <Box className="cfc-scan" />
-            <Box className="cfc-corner cfc-corner--tl" />
-            <Box className="cfc-corner cfc-corner--br" />
-
-            {/* Status bar */}
-            <Box className="cfc-status-bar">
-              <Box className="cfc-dots">
-                <span className="cfc-sd cfc-sd-red" />
-                <span className="cfc-sd cfc-sd-yellow" />
-                <span className="cfc-sd cfc-sd-green" />
-              </Box>
-              <Box className="cfc-status-label">
-                <MdTerminal style={{ fontSize: "0.75rem" }} />
-              </Box>
-              <Box className="cfc-index-stamp"></Box>
-            </Box>
-
-            <Box className="cfc-body">
-              {/* Left: decorative transmission panel */}
-              <Box className="cfc-left-panel">
-                <Box className="cfc-transmission-orb">
-                  <Box className="cfc-trans-ring cfc-trans-ring-1" />
-                  <Box className="cfc-trans-ring cfc-trans-ring-2" />
-                  <Box className="cfc-trans-ring cfc-trans-ring-3" />
-                  <Box className="cfc-trans-core">
-                    <MdEmail style={{ fontSize: "1.8rem", color: "#f13024" }} />
-                  </Box>
-                  <Box className="cfc-trans-glow" />
-                </Box>
-                <Typography className="cfc-left-title">Send a<br/>Message</Typography>
-                <Typography className="cfc-left-sub">Direct Email to {name}</Typography>
-
-                {/* Decorative data lines */}
-                <Box className="cfc-data-lines">
-                  {["TO:", "FROM:", "SUBJECT:", "ENCRYPT:", "STATUS:"].map((label, i) => (
-                    <Box key={i} className="cfc-data-line">
-                      <Typography className="cfc-dl-key">{label}</Typography>
-                      <Box className="cfc-dl-bar" style={{ width: `${40 + i * 12}%`, animationDelay: `${i*0.2}s` }} />
-                    </Box>
-                  ))}
-                </Box>
-              </Box>
-
-              {/* Right: form */}
-              <Box className="cfc-form-area">
-                <ContactMessageCard contactEmail={contactEmail} name={name} />
-              </Box>
-            </Box>
-
-            <Box className="cfc-watermark">⌨</Box>
-          </Box>
-
           <Box className="portfolio-footer">
             <Typography>© {new Date().getFullYear()} {name}. All rights reserved.</Typography>
           </Box>

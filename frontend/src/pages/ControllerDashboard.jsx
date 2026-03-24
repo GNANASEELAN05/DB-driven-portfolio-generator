@@ -2292,7 +2292,7 @@ const pageLabel = { dashboard: "Overview", users: "Registered Users", pdfs: "Pre
                   <table className="cd-table">
                     <thead>
                       <tr>
-                        <th>#</th>
+                        <th>S.No</th>
                         <th>User</th>
                         <th>Email</th>
                         <th>Status</th>
