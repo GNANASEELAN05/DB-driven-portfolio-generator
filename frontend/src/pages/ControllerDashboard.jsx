@@ -1742,7 +1742,7 @@ function RequestsPage({ dark, onDetailChange, onRejectChange }) {
         <table className="cd-table">
           <thead>
             <tr>
-              <th>#</th>
+              <th>S.No</th>
               <th>User</th>
               <th>Full Name</th>
               <th>Version</th>
