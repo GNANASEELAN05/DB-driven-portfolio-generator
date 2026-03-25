@@ -1339,11 +1339,22 @@ function UpiQrPage({ dark, onPreviewChange }) {
   const previewPortalRef = React.useRef(document.body);
 
   const fetchList = useCallback(async () => {
-    if (!localStorage.getItem("controller_token")) return;
+    if (!localStorage.getItem("controller_token")) {
+      window.location.replace("/controller/login");
+      return;
+    }
     setLoading(true);
     try {
       const res = await apiFetch("/master-admin/upi-qr");
-      if (res.ok) setQrList(await res.json());
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          localStorage.removeItem("controller_token");
+          window.location.replace("/controller/login");
+          return;
+        }
+      } else {
+        setQrList(await res.json());
+      }
     } catch {}
     finally { setLoading(false); }
   }, []);
@@ -1614,11 +1625,21 @@ function RequestsPage({ dark, onDetailChange, onRejectChange }) {
   const [acting, setActing]     = useState({});
 
   const fetchRequests = useCallback(async () => {
-    if (!localStorage.getItem("controller_token")) return;
+    if (!localStorage.getItem("controller_token")) {
+      window.location.replace("/controller/login");
+      return;
+    }
     setLoading(true); setErr("");
     try {
       const res = await apiFetch("/master-admin/payment-requests");
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          localStorage.removeItem("controller_token");
+          window.location.replace("/controller/login");
+          return;
+        }
+        throw new Error(`HTTP ${res.status}`);
+      }
       const data = await res.json();
       setRequests(Array.isArray(data) ? data : []);
     } catch (e) { setErr("Failed to load requests."); }
