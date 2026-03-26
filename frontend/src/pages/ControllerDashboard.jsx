@@ -1017,7 +1017,11 @@ const [certPreview, setCertPreview] = useState({ open: false, title: "", blobUrl
                         </div>
                       ) : resumePreview.blobUrl ? (
                         <iframe
-                          src={`${resumePreview.blobUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
+                          src={
+                            /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)
+                              ? `https://docs.google.com/viewer?url=${encodeURIComponent(resumePreview.directUrl)}&embedded=true`
+                              : `${resumePreview.blobUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`
+                          }
                           style={{ width: "100%", height: "100%", border: "none", display: "block" }}
                           title={resumePreview.title}
                         />
