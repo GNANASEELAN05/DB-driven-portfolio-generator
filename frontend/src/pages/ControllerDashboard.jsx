@@ -1017,12 +1017,14 @@ const [certPreview, setCertPreview] = useState({ open: false, title: "", blobUrl
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "rgba(148,163,184,0.6)", fontSize: 13, gap: 10 }}>
                           <div className="cd-loader" /> Loading preview…
                         </div>
-                      ) : resumePreview.blobUrl ? (
+                      ) : resumePreview.blobUrl || resumePreview.resumeId ? (
                         <iframe
                           src={
                             /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)
                               ? `https://docs.google.com/viewer?url=${encodeURIComponent(`${API_BASE}/u/${(username || "").toLowerCase()}/resume/${resumePreview.resumeId}/view`)}&embedded=true`
-                              : `${resumePreview.blobUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`
+                              : resumePreview.blobUrl
+                                ? `${resumePreview.blobUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`
+                                : `${API_BASE}/u/${(username || "").toLowerCase()}/resume/${resumePreview.resumeId}/view#toolbar=0&navpanes=0&scrollbar=0&view=FitH`
                           }
                           style={{ width: "100%", height: "100%", border: "none", display: "block" }}
                           title={resumePreview.title}
@@ -1172,7 +1174,11 @@ function PdfPreviewModal({ open, title, url, onClose, dark }) {
         <div style={{ flex: 1, overflow: "hidden", background: "#fff", minHeight: 0 }}>
           {url ? (
             <iframe
-              src={`${url}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
+              src={
+                /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)
+                  ? `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`
+                  : `${url}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`
+              }
               style={{ width: "100%", height: "100%", border: "none", display: "block" }}
               title={title}
             />
