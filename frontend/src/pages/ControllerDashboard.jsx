@@ -110,7 +110,7 @@ function UserDetailPanel({ user, onClose, dark }) {
   const [loading, setLoading] = useState(true);
 const [projectModal, setProjectModal] = useState(null);
 const [langModal, setLangModal] = useState(null);
-const [resumePreview, setResumePreview] = useState({ open: false, title: "", blobUrl: "", loading: false, resumeId: null });
+const [resumePreview, setResumePreview] = useState({ open: false, title: "", blobUrl: "", loading: false, resumeId: null, directUrl: "" });
 const [achModal, setAchModal] = useState(null);
 const [certPreview, setCertPreview] = useState({ open: false, title: "", blobUrl: "", loading: false, isImage: false });
   const username = user?.username;
@@ -932,13 +932,16 @@ const [certPreview, setCertPreview] = useState({ open: false, title: "", blobUrl
                           title="Preview Resume"
                           style={{ cursor: "pointer", flexShrink: 0 }}
                           onClick={async () => {
-                            setResumePreview({ open: true, title: r.fileName || "Resume.pdf", blobUrl: "", loading: true, resumeId: r.id });
+                            const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+                            const directUrl = `${API_BASE}/u/${(username || "").toLowerCase()}/resume/${r.id}/view`;
+                            if (isMobile) {
+                              setResumePreview({ open: true, title: r.fileName || "Resume.pdf", blobUrl: "", loading: false, resumeId: r.id, directUrl });
+                              return;
+                            }
+                            setResumePreview({ open: true, title: r.fileName || "Resume.pdf", blobUrl: "", loading: true, resumeId: r.id, directUrl });
                             try {
                               const token = localStorage.getItem("controller_token");
-                              const res = await fetch(
-                                `${API_BASE}/u/${(username || "").toLowerCase()}/resume/${r.id}/view`,
-                                { headers: token ? { Authorization: `Bearer ${token}` } : {} }
-                              );
+                              const res = await fetch(directUrl, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
                               if (!res.ok) throw new Error(`HTTP ${res.status}`);
                               const blob = await res.blob();
                               const url = URL.createObjectURL(blob);
@@ -1012,20 +1015,20 @@ const [certPreview, setCertPreview] = useState({ open: false, title: "", blobUrl
                       >{Icon.close}</button>
                     </div>
                     {/* Body */}
-                    <div style={{ flex: 1, overflow: "hidden", background: "#000" }}>
+                    <div style={{ flex: 1, overflow: "hidden", background: "#fff" }}>
                       {resumePreview.loading ? (
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "rgba(148,163,184,0.6)", fontSize: 13, gap: 10 }}>
                           <div className="cd-loader" /> Loading preview…
                         </div>
-                      ) : resumePreview.blobUrl || resumePreview.resumeId ? (
+                      ) : resumePreview.blobUrl ? (
                         <iframe
-                          src={
-                            /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)
-                              ? `https://docs.google.com/viewer?url=${encodeURIComponent(`${API_BASE}/u/${(username || "").toLowerCase()}/resume/${resumePreview.resumeId}/view`)}&embedded=true`
-                              : resumePreview.blobUrl
-                                ? `${resumePreview.blobUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`
-                                : `${API_BASE}/u/${(username || "").toLowerCase()}/resume/${resumePreview.resumeId}/view#toolbar=0&navpanes=0&scrollbar=0&view=FitH`
-                          }
+                          src={`${resumePreview.blobUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
+                          style={{ width: "100%", height: "100%", border: "none", display: "block" }}
+                          title={resumePreview.title}
+                        />
+                      ) : resumePreview.directUrl ? (
+                        <iframe
+                          src={`https://docs.google.com/viewer?url=${encodeURIComponent(resumePreview.directUrl)}&embedded=true`}
                           style={{ width: "100%", height: "100%", border: "none", display: "block" }}
                           title={resumePreview.title}
                         />
@@ -1046,7 +1049,7 @@ const [certPreview, setCertPreview] = useState({ open: false, title: "", blobUrl
                       <button
                         onClick={() => {
                           if (resumePreview.blobUrl) URL.revokeObjectURL(resumePreview.blobUrl);
-                          setResumePreview({ open: false, title: "", blobUrl: "", loading: false, resumeId: null });
+                          setResumePreview({ open: false, title: "", blobUrl: "", loading: false, resumeId: null, directUrl: "" });
                         }}
                         style={{
                           display: "inline-flex", alignItems: "center", gap: 6,
