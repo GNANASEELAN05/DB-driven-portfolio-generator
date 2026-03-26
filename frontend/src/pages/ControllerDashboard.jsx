@@ -932,12 +932,7 @@ const [certPreview, setCertPreview] = useState({ open: false, title: "", blobUrl
                           title="Preview Resume"
                           style={{ cursor: "pointer", flexShrink: 0 }}
                           onClick={async () => {
-                            const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
                             const directUrl = `${API_BASE}/u/${(username || "").toLowerCase()}/resume/${r.id}/view`;
-                            if (isMobile) {
-                              setResumePreview({ open: true, title: r.fileName || "Resume.pdf", blobUrl: "", loading: false, resumeId: r.id, directUrl });
-                              return;
-                            }
                             setResumePreview({ open: true, title: r.fileName || "Resume.pdf", blobUrl: "", loading: true, resumeId: r.id, directUrl });
                             try {
                               const token = localStorage.getItem("controller_token");
@@ -1014,7 +1009,7 @@ const [certPreview, setCertPreview] = useState({ open: false, title: "", blobUrl
                         }}
                       >{Icon.close}</button>
                     </div>
-                    {/* Body */}
+{/* Body */}
                     <div style={{ flex: 1, overflow: "hidden", background: "#fff" }}>
                       {resumePreview.loading ? (
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "rgba(148,163,184,0.6)", fontSize: 13, gap: 10 }}>
@@ -1022,16 +1017,36 @@ const [certPreview, setCertPreview] = useState({ open: false, title: "", blobUrl
                         </div>
                       ) : resumePreview.blobUrl ? (
                         <iframe
-                          src={`${resumePreview.blobUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
+                          src={`${resumePreview.blobUrl}`}
                           style={{ width: "100%", height: "100%", border: "none", display: "block" }}
                           title={resumePreview.title}
                         />
                       ) : resumePreview.directUrl ? (
-                        <iframe
-                          src={`https://docs.google.com/viewer?url=${encodeURIComponent(resumePreview.directUrl)}&embedded=true`}
-                          style={{ width: "100%", height: "100%", border: "none", display: "block" }}
-                          title={resumePreview.title}
-                        />
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: 16, padding: 24, background: "#fff" }}>
+                          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: "#1e293b", textAlign: "center" }}>
+                            {resumePreview.title}
+                          </div>
+                          <div style={{ fontSize: 12.5, color: "#64748b", textAlign: "center", lineHeight: 1.6 }}>
+                            PDF preview is not available in mobile browser.<br />Tap the button below to open it directly.
+                          </div>
+                          <a
+                            href={resumePreview.directUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              display: "inline-flex", alignItems: "center", gap: 8,
+                              padding: "10px 22px", borderRadius: 10,
+                              background: "linear-gradient(135deg, #6366f1, #4f46e5)",
+                              color: "#fff", fontWeight: 700, fontSize: 13.5,
+                              textDecoration: "none",
+                              boxShadow: "0 4px 14px rgba(99,102,241,0.35)",
+                            }}
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                            Open PDF
+                          </a>
+                        </div>
                       ) : (
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "rgba(148,163,184,0.6)", fontSize: 13 }}>
                           Preview not available.
