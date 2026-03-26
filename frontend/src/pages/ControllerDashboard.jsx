@@ -110,7 +110,7 @@ function UserDetailPanel({ user, onClose, dark }) {
   const [loading, setLoading] = useState(true);
 const [projectModal, setProjectModal] = useState(null);
 const [langModal, setLangModal] = useState(null);
-const [resumePreview, setResumePreview] = useState({ open: false, title: "", blobUrl: "", loading: false });
+const [resumePreview, setResumePreview] = useState({ open: false, title: "", blobUrl: "", loading: false, resumeId: null });
 const [achModal, setAchModal] = useState(null);
 const [certPreview, setCertPreview] = useState({ open: false, title: "", blobUrl: "", loading: false, isImage: false });
   const username = user?.username;
@@ -932,7 +932,7 @@ const [certPreview, setCertPreview] = useState({ open: false, title: "", blobUrl
                           title="Preview Resume"
                           style={{ cursor: "pointer", flexShrink: 0 }}
                           onClick={async () => {
-                            setResumePreview({ open: true, title: r.fileName || "Resume.pdf", blobUrl: "", loading: true });
+                            setResumePreview({ open: true, title: r.fileName || "Resume.pdf", blobUrl: "", loading: true, resumeId: r.id });
                             try {
                               const token = localStorage.getItem("controller_token");
                               const res = await fetch(
@@ -942,7 +942,7 @@ const [certPreview, setCertPreview] = useState({ open: false, title: "", blobUrl
                               if (!res.ok) throw new Error(`HTTP ${res.status}`);
                               const blob = await res.blob();
                               const url = URL.createObjectURL(blob);
-                              setResumePreview({ open: true, title: r.fileName || "Resume.pdf", blobUrl: url, loading: false });
+                              setResumePreview(prev => ({ ...prev, blobUrl: url, loading: false }));
                             } catch {
                               setResumePreview(p => ({ ...p, loading: false }));
                               alert("Could not load resume preview.");
@@ -971,7 +971,7 @@ const [certPreview, setCertPreview] = useState({ open: false, title: "", blobUrl
                   onClick={(e) => {
                     if (e.target === e.currentTarget) {
                       if (resumePreview.blobUrl) URL.revokeObjectURL(resumePreview.blobUrl);
-                      setResumePreview({ open: false, title: "", blobUrl: "", loading: false });
+                      setResumePreview({ open: false, title: "", blobUrl: "", loading: false, resumeId: null });
                     }
                   }}
                 >
@@ -1001,7 +1001,7 @@ const [certPreview, setCertPreview] = useState({ open: false, title: "", blobUrl
                       <button
                         onClick={() => {
                           if (resumePreview.blobUrl) URL.revokeObjectURL(resumePreview.blobUrl);
-                          setResumePreview({ open: false, title: "", blobUrl: "", loading: false });
+                          setResumePreview({ open: false, title: "", blobUrl: "", loading: false, resumeId: null });
                         }}
                         style={{
                           width: 30, height: 30, borderRadius: 8,
@@ -1021,7 +1021,7 @@ const [certPreview, setCertPreview] = useState({ open: false, title: "", blobUrl
                         <iframe
                           src={
                             /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)
-                              ? `https://docs.google.com/viewer?url=${encodeURIComponent(resumePreview.blobUrl)}&embedded=true`
+                              ? `https://docs.google.com/viewer?url=${encodeURIComponent(`${API_BASE}/u/${(username || "").toLowerCase()}/resume/${resumePreview.resumeId}/view`)}&embedded=true`
                               : `${resumePreview.blobUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`
                           }
                           style={{ width: "100%", height: "100%", border: "none", display: "block" }}
@@ -1044,7 +1044,7 @@ const [certPreview, setCertPreview] = useState({ open: false, title: "", blobUrl
                       <button
                         onClick={() => {
                           if (resumePreview.blobUrl) URL.revokeObjectURL(resumePreview.blobUrl);
-                          setResumePreview({ open: false, title: "", blobUrl: "", loading: false });
+                          setResumePreview({ open: false, title: "", blobUrl: "", loading: false, resumeId: null });
                         }}
                         style={{
                           display: "inline-flex", alignItems: "center", gap: 6,
