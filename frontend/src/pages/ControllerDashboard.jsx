@@ -104,12 +104,13 @@ function StatCard({ label, value, sub, icon, color, loading }) {
 }
 
 // ── User Detail Panel ──
-function UserDetailPanel({ user, onClose, dark, onResumePreview }) {
+function UserDetailPanel({ user, onClose, dark }) {
   const [tab, setTab] = useState("overview");
   const [data, setData] = useState({});
   const [loading, setLoading] = useState(true);
 const [projectModal, setProjectModal] = useState(null);
 const [langModal, setLangModal] = useState(null);
+const [resumePreview, setResumePreview] = useState({ open: false, title: "", blobUrl: "", loading: false, resumeId: null, directUrl: "" });
 const [achModal, setAchModal] = useState(null);
 const [certPreview, setCertPreview] = useState({ open: false, title: "", blobUrl: "", loading: false, isImage: false });
   const username = user?.username;
@@ -925,21 +926,28 @@ const [certPreview, setCertPreview] = useState({ open: false, title: "", blobUrl
                           {Icon.check} Active
                         </span>
                       )}
-{r.id && (
+                      {r.id && (
                         <button
                           className="cd-pdf-action-btn"
                           title="Preview Resume"
                           style={{ cursor: "pointer", flexShrink: 0 }}
                           onClick={async () => {
                             const directUrl = `${API_BASE}/u/${(username || "").toLowerCase()}/resume/${r.id}/view`;
+                            const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+                            if (isMobile) {
+                              setResumePreview({ open: true, title: r.fileName || "Resume.pdf", blobUrl: "mobile", loading: false, resumeId: r.id, directUrl });
+                              return;
+                            }
+                            setResumePreview({ open: true, title: r.fileName || "Resume.pdf", blobUrl: "", loading: true, resumeId: r.id, directUrl });
                             try {
                               const token = localStorage.getItem("controller_token");
                               const res = await fetch(directUrl, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
                               if (!res.ok) throw new Error(`HTTP ${res.status}`);
                               const blob = await res.blob();
-                              const blobUrl = URL.createObjectURL(blob);
-                              onResumePreview({ open: true, title: r.fileName || "Resume.pdf", url: blobUrl });
+                              const url = URL.createObjectURL(blob);
+                              setResumePreview(prev => ({ ...prev, blobUrl: url, loading: false }));
                             } catch {
+                              setResumePreview(p => ({ ...p, loading: false }));
                               alert("Could not load resume preview.");
                             }
                           }}
@@ -949,6 +957,86 @@ const [certPreview, setCertPreview] = useState({ open: false, title: "", blobUrl
                       )}
                     </div>
                   ))}
+                </div>
+              )}
+
+              {/* Resume inline preview modal */}
+              {resumePreview.open && (
+                <div
+                  style={{
+                    position: "fixed", inset: 0, zIndex: 500,
+                    background: "rgba(5,7,20,0.85)",
+                    backdropFilter: "blur(10px)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    padding: 20,
+                    animation: "cd-fade-in 0.2s ease",
+                  }}
+                  onClick={(e) => {
+                    if (e.target === e.currentTarget) {
+                      if (resumePreview.blobUrl) URL.revokeObjectURL(resumePreview.blobUrl);
+                      setResumePreview({ open: false, title: "", blobUrl: "", loading: false, resumeId: null });
+                    }
+                  }}
+                >
+                  <div style={{
+                    width: "100%", maxWidth: 860, height: "88vh",
+                    background: dark ? "#0d0f28" : "#ffffff",
+                    border: "1px solid rgba(99,102,241,0.3)",
+                    borderRadius: 20, display: "flex", flexDirection: "column",
+                    overflow: "hidden",
+                    animation: "cd-modal-in 0.28s cubic-bezier(0.22,1,0.36,1)",
+                    boxShadow: "0 32px 80px rgba(0,0,0,0.5)",
+                  }}>
+                    {/* Header */}
+                    <div style={{
+                      display: "flex", alignItems: "center", justifyContent: "space-between",
+                      padding: "14px 20px",
+                      borderBottom: `1px solid ${dark ? "rgba(99,102,241,0.18)" : "rgba(99,102,241,0.12)"}`,
+                      background: dark ? "rgba(13,15,40,0.9)" : "rgba(255,255,255,0.95)",
+                      flexShrink: 0,
+                    }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, color: dark ? "#a5b4fc" : "#4f46e5" }}>
+                        {Icon.pdf}
+                        <span style={{ fontWeight: 800, fontSize: 14, color: dark ? "#e2e8f0" : "#1e293b" }}>
+                          {resumePreview.title}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => {
+                          if (resumePreview.blobUrl) URL.revokeObjectURL(resumePreview.blobUrl);
+                          setResumePreview({ open: false, title: "", blobUrl: "", loading: false, resumeId: null });
+                        }}
+                        style={{
+                          width: 30, height: 30, borderRadius: 8,
+                          background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.18)",
+                          color: dark ? "rgba(165,180,252,0.7)" : "#6366f1",
+                          display: "grid", placeItems: "center", cursor: "pointer",
+                        }}
+                      >{Icon.close}</button>
+                    </div>
+                    {/* Body */}
+                    <div style={{ flex: 1, overflow: "hidden", background: "#fff", minHeight: 0 }}>
+                      {resumePreview.loading ? (
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "rgba(148,163,184,0.6)", fontSize: 13, gap: 10 }}>
+                          <div className="cd-loader" /> Loading preview…
+                        </div>
+                      ) : resumePreview.blobUrl ? (
+                        <iframe
+                          src={
+                            /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)
+                              ? `https://docs.google.com/viewer?url=${encodeURIComponent(resumePreview.directUrl)}&embedded=true`
+                              : `${resumePreview.blobUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`
+                          }
+                          style={{ width: "100%", height: "100%", border: "none", display: "block" }}
+                          title={resumePreview.title}
+                        />
+                      ) : (
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "rgba(148,163,184,0.6)", fontSize: 13 }}>
+                          Preview not available.
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -1902,7 +1990,6 @@ export default function ControllerDashboard() {
   const [deleteConfirm, setDeleteConfirm] = useState(null); // holds user object to delete
   const [upiPreview, setUpiPreview] = useState({ open: false, tier: "", url: "" });
   const [pdfPreview, setPdfPreview] = useState({ open: false, title: "", url: "" });
-  const [resumePreview, setResumePreview] = useState({ open: false, title: "", url: "" });
 
   useEffect(() => {
     document.title = "Controller Dashboard";
@@ -2250,7 +2337,7 @@ const pageLabel = { dashboard: "Overview", users: "Registered Users", pdfs: "Pre
 
       {/* User detail panel */}
       {selectedUser && (
-        <UserDetailPanel user={selectedUser} onClose={() => setSelectedUser(null)} dark={dark} onResumePreview={setResumePreview} />
+        <UserDetailPanel user={selectedUser} onClose={() => setSelectedUser(null)} dark={dark} />
       )}
 
       {/* Payment Request Detail Modal — rendered at root level like UserDetailPanel */}
@@ -2345,9 +2432,6 @@ const pageLabel = { dashboard: "Overview", users: "Registered Users", pdfs: "Pre
 
 {/* PDF Preview Modal — root level to avoid stacking context clipping */}
       <PdfPreviewModal open={pdfPreview.open} title={pdfPreview.title} url={pdfPreview.url} onClose={() => setPdfPreview({ open: false, title: "", url: "" })} dark={dark} />
-
-      {/* Resume Preview Modal — root level, same as PdfPreviewModal */}
-      <PdfPreviewModal open={resumePreview.open} title={resumePreview.title} url={resumePreview.url} onClose={() => { if (resumePreview.url) URL.revokeObjectURL(resumePreview.url); setResumePreview({ open: false, title: "", url: "" }); }} dark={dark} />
 
       {/* UPI QR Preview Modal — root level to avoid stacking context clipping */}
       {upiPreview.open && (
