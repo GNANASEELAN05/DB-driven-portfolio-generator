@@ -933,6 +933,11 @@ const [certPreview, setCertPreview] = useState({ open: false, title: "", blobUrl
                           style={{ cursor: "pointer", flexShrink: 0 }}
                           onClick={async () => {
                             const directUrl = `${API_BASE}/u/${(username || "").toLowerCase()}/resume/${r.id}/view`;
+                            const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+                            if (isMobile) {
+                              setResumePreview({ open: true, title: r.fileName || "Resume.pdf", blobUrl: "mobile", loading: false, resumeId: r.id, directUrl });
+                              return;
+                            }
                             setResumePreview({ open: true, title: r.fileName || "Resume.pdf", blobUrl: "", loading: true, resumeId: r.id, directUrl });
                             try {
                               const token = localStorage.getItem("controller_token");
