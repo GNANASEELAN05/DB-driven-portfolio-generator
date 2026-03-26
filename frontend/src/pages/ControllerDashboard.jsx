@@ -931,25 +931,9 @@ const [certPreview, setCertPreview] = useState({ open: false, title: "", blobUrl
                           className="cd-pdf-action-btn"
                           title="Preview Resume"
                           style={{ cursor: "pointer", flexShrink: 0 }}
-                          onClick={async () => {
+                          onClick={() => {
                             const directUrl = `${API_BASE}/u/${(username || "").toLowerCase()}/resume/${r.id}/view`;
-                            const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
-                            if (isMobile) {
-                              setResumePreview({ open: true, title: r.fileName || "Resume.pdf", blobUrl: "mobile", loading: false, resumeId: r.id, directUrl });
-                              return;
-                            }
-                            setResumePreview({ open: true, title: r.fileName || "Resume.pdf", blobUrl: "", loading: true, resumeId: r.id, directUrl });
-                            try {
-                              const token = localStorage.getItem("controller_token");
-                              const res = await fetch(directUrl, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
-                              if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                              const blob = await res.blob();
-                              const url = URL.createObjectURL(blob);
-                              setResumePreview(prev => ({ ...prev, blobUrl: url, loading: false }));
-                            } catch {
-                              setResumePreview(p => ({ ...p, loading: false }));
-                              alert("Could not load resume preview.");
-                            }
+                            setResumePreview({ open: true, title: r.fileName || "Resume.pdf", blobUrl: directUrl, loading: false, resumeId: r.id, directUrl });
                           }}
                         >
                           {Icon.eye}
@@ -1024,7 +1008,7 @@ const [certPreview, setCertPreview] = useState({ open: false, title: "", blobUrl
                         <iframe
                           src={
                             /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)
-                              ? `https://docs.google.com/viewer?url=${encodeURIComponent(resumePreview.directUrl)}&embedded=true`
+                              ? `https://docs.google.com/viewer?url=${encodeURIComponent(resumePreview.blobUrl)}&embedded=true`
                               : `${resumePreview.blobUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`
                           }
                           style={{ width: "100%", height: "100%", border: "none", display: "block" }}
