@@ -1079,7 +1079,7 @@ const resetPortfolioLoading = () => {
 
 const goToPortfolioPage = () => {
   if (!username) return;
-  window.open(`${window.location.origin}/${encodeURIComponent(username)}`, "_blank", "noopener,noreferrer");
+window.open(`${window.location.origin}/${encodeURIComponent(username)}/premium1`, "_blank", "noopener,noreferrer");
 };
 
 const cancelPortfolioLoading = () => {
@@ -1089,7 +1089,7 @@ const cancelPortfolioLoading = () => {
 
 const openGeneratedPortfolio = () => {
   if (!portfolioReady || !username) return;
-  window.open(`${window.location.origin}/${encodeURIComponent(username)}`, "_blank", "noopener,noreferrer");
+window.open(`${window.location.origin}/${encodeURIComponent(username)}/premium1`, "_blank", "noopener,noreferrer");
   resetPortfolioLoading();
 };
 

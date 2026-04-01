@@ -643,12 +643,12 @@ const handleDrawerToggle = () => setMobileOpen((p) => !p);
   };
   const goToPortfolioPage2 = () => {
     if (!username) return;
-    window.open(`${window.location.origin}/${encodeURIComponent(username)}`, "_blank", "noopener,noreferrer");
+  window.open(`${window.location.origin}/${encodeURIComponent(username)}/premium2`, "_blank", "noopener,noreferrer");
   };
   const cancelPortfolioLoading2 = () => { portfolioLoadingCancelledRef2.current = true; resetPortfolioLoading2(); };
   const openGeneratedPortfolio2 = () => {
     if (!portfolioReady2 || !username) return;
-    window.open(`${window.location.origin}/${encodeURIComponent(username)}`, "_blank", "noopener,noreferrer");
+  window.open(`${window.location.origin}/${encodeURIComponent(username)}/premium2`, "_blank", "noopener,noreferrer");
     resetPortfolioLoading2();
   };
   const startPortfolioLoading2 = () => {

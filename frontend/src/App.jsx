@@ -171,14 +171,6 @@ export default function App() {
 
   // ── /:username viewer — redirect owner to their best premium ──────────────
   const PremiumRedirectWrapper = () => {
-    const { username } = useParams();
-    const authUser = getAuthUser();
-    if (authUser && authUser === (username || "").toLowerCase()) {
-      const hasPremium2 = localStorage.getItem(`premium2_${authUser}`) === "true";
-      const hasPremium1 = localStorage.getItem(`premium1_${authUser}`) === "true";
-      if (hasPremium2) return <Navigate to={`/${username}/premium2`} replace />;
-      if (hasPremium1) return <Navigate to={`/${username}/premium1`} replace />;
-    }
     return <Home toggleTheme={toggleViewerTheme} />;
   };
 
