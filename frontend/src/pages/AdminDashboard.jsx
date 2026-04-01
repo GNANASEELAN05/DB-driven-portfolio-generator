@@ -389,7 +389,7 @@ function ProjectEditorDialog({ open, mode, initial, onClose, onSave }) {
         {mode === "edit" ? "Edit Project" : "Add Project"}
       </DialogTitle>
 
-      <DialogContent sx={{ pt: 4, overflow: "visible" }}>
+      <DialogContent sx={{ pt: { xs: 7, md: 4 }, overflow: "visible", overflowY: { xs: "auto", md: "visible" }, maxHeight: { xs: "70vh", md: "none" }, scrollbarWidth: "none", msOverflowStyle: "none", "&::-webkit-scrollbar": { display: "none" } }}>
         <Grid container spacing={2}>
           <Grid item xs={12} md={6}>
             <SmallTextField

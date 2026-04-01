@@ -275,7 +275,7 @@ function ProjectEditorDialog({ open, mode, initial, onClose, onSave }) {
         {mode === "edit" ? "Edit Project" : "Add Project"}
       </DialogTitle>
 
-      <DialogContent sx={{ pt: 4, overflow: "visible" }}>
+      <DialogContent sx={{ pt: { xs: 2, md: 4 }, overflow: "visible", overflowY: { xs: "auto", md: "auto" }, maxHeight: { xs: "75vh", md: "none" }, scrollbarWidth: "thin" }}>
         <Grid container spacing={2}>
           <Grid item xs={12} md={6}><SmallTextField label="Project Title" value={form.title} onChange={handleChange("title")} /></Grid>
           <Grid item xs={12} md={6}><SmallTextField label="Tech Stack (comma separated)" value={form.tech} onChange={handleChange("tech")} /></Grid>
