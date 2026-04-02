@@ -383,13 +383,39 @@ function ProjectEditorDialog({ open, mode, initial, onClose, onSave }) {
   const handleChange = (k) => (e) => setForm((p) => ({ ...p, [k]: e.target.value }));
   const canSave = form.title.trim().length >= 2;
 
-  return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm" PaperProps={{ sx: { overflow: "visible" } }}>
-      <DialogTitle sx={{ fontWeight: 950 }}>
+return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      fullWidth
+      maxWidth="sm"
+      PaperProps={{
+        sx: {
+          display: "flex",
+          flexDirection: "column",
+          height: { xs: "92vh", md: "85vh" },
+          maxHeight: { xs: "92vh", md: "85vh" },
+          m: { xs: 1, md: 2 },
+          overflow: "hidden",
+        }
+      }}
+    >
+      <DialogTitle sx={{ fontWeight: 950, flexShrink: 0 }}>
         {mode === "edit" ? "Edit Project" : "Add Project"}
       </DialogTitle>
 
-      <DialogContent sx={{ pt: { xs: 7, md: 4 }, overflow: "visible", overflowY: { xs: "auto", md: "visible" }, maxHeight: { xs: "70vh", md: "none" }, scrollbarWidth: "none", msOverflowStyle: "none", "&::-webkit-scrollbar": { display: "none" } }}>
+      <DialogContent
+        sx={{
+          flex: 1,
+          overflowY: "auto",
+          pt: "20px !important",
+          px: { xs: 2, md: 3 },
+          pb: 1,
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
+          "&::-webkit-scrollbar": { display: "none" },
+        }}
+      >
         <Grid container spacing={2}>
           <Grid item xs={12} md={6}>
             <SmallTextField
@@ -424,37 +450,40 @@ function ProjectEditorDialog({ open, mode, initial, onClose, onSave }) {
           </Grid>
 
           <Grid item xs={12} sx={{ width: "100%" }}>
-  <SmallTextField
-    label="Description"
-    value={form.description || ""}
-    onChange={handleChange("description")}
-    fullWidth
-    multiline
-    InputProps={{
-      inputComponent: TextareaAutosize,
-      inputProps: { minRows: 2 },
-    }}
-    sx={{
-      width: "100%",
-      "& .MuiInputBase-root": {
-        width: "100%",
-        alignItems: "flex-start",
-      },
-      "& textarea": {
-        width: "100%",
-        boxSizing: "border-box",
-        resize: "none",
-        overflow: "hidden",
-        whiteSpace: "pre-wrap",
-        overflowWrap: "break-word",
-      },
-    }}
-  />
-</Grid>
-
+            <SmallTextField
+              label="Description"
+              value={form.description || ""}
+              onChange={handleChange("description")}
+              fullWidth
+              multiline
+              InputProps={{
+                inputComponent: TextareaAutosize,
+                inputProps: { minRows: 2 },
+              }}
+              sx={{
+                width: "100%",
+                "& .MuiInputBase-root": {
+                  width: "100%",
+                  alignItems: "flex-start",
+                },
+                "& textarea": {
+                  width: "100%",
+                  boxSizing: "border-box",
+                  resize: "none",
+                  overflow: "auto !important",
+                  whiteSpace: "pre-wrap",
+                  overflowWrap: "break-word",
+                  maxHeight: "220px",
+                  scrollbarWidth: "none",
+                  msOverflowStyle: "none",
+                },
+                "& textarea::-webkit-scrollbar": { display: "none" },
+              }}
+            />
+          </Grid>
 
           <Grid item xs={12}>
-            <Stack direction="row" spacing={1} alignItems="center">
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ pt: 1 }}>
               <Chip
                 label={form.featured ? "Featured: YES" : "Featured: NO"}
                 sx={{
@@ -481,36 +510,47 @@ function ProjectEditorDialog({ open, mode, initial, onClose, onSave }) {
         </Grid>
       </DialogContent>
 
-      <DialogActions sx={{ p: 2 }}>
-        <Button
-          onClick={onClose}
-          variant="outlined"
-          size="small"
-          startIcon={<MdClose />}
-          sx={{
-            borderRadius: 999,
-            fontWeight: 950,
-            borderColor: "rgba(122,63,145,0.55)",
-            color: BRAND_PRIMARY,
-          }}
-        >
-          Cancel
-        </Button>
-        <Button
-          disabled={!canSave}
-          onClick={() => onSave(form)}
-          variant="contained"
-          size="small"
-          startIcon={<MdSave />}
-          sx={{
-            borderRadius: 999,
-            fontWeight: 950,
-            background: `linear-gradient(135deg, ${BRAND_PRIMARY}, ${BRAND_DARK})`,
-          }}
-        >
-          {mode === "edit" ? "Save Changes" : "Add Project"}
-        </Button>
-      </DialogActions>
+      <Box
+        sx={{
+          flexShrink: 0,
+          px: 2,
+          pt: 1.5,
+          pb: 2,
+          borderTop: "1px solid rgba(122,63,145,0.15)",
+          background: "inherit",
+        }}
+      >
+        <Stack direction="row" spacing={1} justifyContent="flex-end">
+          <Button
+            onClick={onClose}
+            variant="outlined"
+            size="small"
+            startIcon={<MdClose />}
+            sx={{
+              borderRadius: 999,
+              fontWeight: 950,
+              borderColor: "rgba(122,63,145,0.55)",
+              color: BRAND_PRIMARY,
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            disabled={!canSave}
+            onClick={() => onSave(form)}
+            variant="contained"
+            size="small"
+            startIcon={<MdSave />}
+            sx={{
+              borderRadius: 999,
+              fontWeight: 950,
+              background: `linear-gradient(135deg, ${BRAND_PRIMARY}, ${BRAND_DARK})`,
+            }}
+          >
+            {mode === "edit" ? "Save Changes" : "Add Project"}
+          </Button>
+        </Stack>
+      </Box>
     </Dialog>
   );
 }

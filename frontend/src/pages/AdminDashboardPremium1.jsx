@@ -262,33 +262,69 @@ function ProjectEditorDialog({ open, mode, initial, onClose, onSave }) {
   const handleChange = (k) => (e) => setForm((p) => ({ ...p, [k]: e.target.value }));
   const canSave = form.title.trim().length >= 2;
 
-  return (
+return (
     <Dialog
       open={open} onClose={onClose} fullWidth maxWidth="sm"
       className={isDark ? "p1-dialog" : "p1-dialog p1-dialog-light"}
+      PaperProps={{
+        sx: {
+          display: "flex",
+          flexDirection: "column",
+          height: { xs: "92vh", md: "85vh" },
+          maxHeight: { xs: "92vh", md: "85vh" },
+          m: { xs: 1, md: 2 },
+          overflow: "hidden",
+        }
+      }}
     >
-      <DialogTitle className="p1-dialog-title">
+      <DialogTitle className="p1-dialog-title" sx={{ flexShrink: 0 }}>
         {mode === "edit" ? "Edit Project" : "Add Project"}
       </DialogTitle>
 
-      <DialogContent sx={{ pt: { xs: 2, md: 4 }, overflow: "visible", overflowY: { xs: "auto", md: "auto" }, maxHeight: { xs: "75vh", md: "none" }, scrollbarWidth: "thin" }}>
+      <DialogContent
+        sx={{
+          flex: 1,
+          overflowY: "auto",
+          pt: { xs: 2, md: 3 },
+          px: { xs: 2, md: 3 },
+          pb: 1,
+          scrollbarWidth: "thin",
+          msOverflowStyle: "auto",
+          "&::-webkit-scrollbar": { width: "4px" },
+          "&::-webkit-scrollbar-track": { background: "transparent" },
+          "&::-webkit-scrollbar-thumb": { background: "rgba(45,212,191,0.30)", borderRadius: "4px" },
+        }}
+      >
         <Grid container spacing={2}>
           <Grid item xs={12} md={6}><SmallTextField label="Project Title" value={form.title} onChange={handleChange("title")} /></Grid>
           <Grid item xs={12} md={6}><SmallTextField label="Tech Stack (comma separated)" value={form.tech} onChange={handleChange("tech")} /></Grid>
           <Grid item xs={12} md={6}><SmallTextField label="Repo URL" value={form.repoUrl} onChange={handleChange("repoUrl")} /></Grid>
           <Grid item xs={12} md={6}><SmallTextField label="Live URL" value={form.liveUrl} onChange={handleChange("liveUrl")} /></Grid>
-
           <Grid item xs={12} sx={{ width: "100%" }}>
             <SmallTextField
               label="Description" value={form.description || ""} onChange={handleChange("description")}
               fullWidth multiline
-              InputProps={{ inputComponent: TextareaAutosize, inputProps: { minRows: 2 } }}
-              sx={{ width: "100%", "& .MuiInputBase-root": { width: "100%", alignItems: "flex-start" }, "& textarea": { width: "100%", boxSizing: "border-box", resize: "none", overflow: "hidden", whiteSpace: "pre-wrap", overflowWrap: "break-word" } }}
+              InputProps={{ inputComponent: TextareaAutosize, inputProps: { minRows: 3 } }}
+              sx={{
+                width: "100%",
+                "& .MuiInputBase-root": { width: "100%", alignItems: "flex-start" },
+                "& textarea": {
+                  width: "100%",
+                  boxSizing: "border-box",
+                  resize: "none",
+                  overflow: "auto !important",
+                  whiteSpace: "pre-wrap",
+                  overflowWrap: "break-word",
+                  maxHeight: "280px",
+                  scrollbarWidth: "thin",
+                  "&::-webkit-scrollbar": { width: "4px" },
+                  "&::-webkit-scrollbar-thumb": { background: "rgba(45,212,191,0.30)", borderRadius: "4px" },
+                },
+              }}
             />
           </Grid>
-
-          <Grid item xs={12}>
-            <Stack direction="row" spacing={1.2} alignItems="center">
+<Grid item xs={12}>
+            <Stack direction="row" spacing={1.2} alignItems="center" sx={{ pt: 1 }}>
               <Chip
                 label={form.featured ? "Featured: YES" : "Featured: NO"}
                 className={form.featured ? "p1-chip-yes" : "p1-chip-no"}
@@ -302,12 +338,23 @@ function ProjectEditorDialog({ open, mode, initial, onClose, onSave }) {
         </Grid>
       </DialogContent>
 
-      <DialogActions sx={{ p: 2, gap: 1 }}>
-        <Button onClick={onClose} size="small" className="p1-btn-outlined" startIcon={<MdClose />}>Cancel</Button>
-        <Button disabled={!canSave} onClick={() => onSave(form)} size="small" className="p1-btn-primary" startIcon={<MdSave />}>
-          {mode === "edit" ? "Save Changes" : "Add Project"}
-        </Button>
-      </DialogActions>
+      <Box
+        sx={{
+          flexShrink: 0,
+          px: 2,
+          pt: 1.5,
+          pb: 2,
+          borderTop: isDark ? "1px solid rgba(45,212,191,0.12)" : "1px solid rgba(0,0,0,0.08)",
+          background: "inherit",
+        }}
+      >
+        <Stack direction="row" spacing={1} justifyContent="flex-end">
+          <Button onClick={onClose} size="small" className="p1-btn-outlined" startIcon={<MdClose />}>Cancel</Button>
+          <Button disabled={!canSave} onClick={() => onSave(form)} size="small" className="p1-btn-primary" startIcon={<MdSave />}>
+            {mode === "edit" ? "Save Changes" : "Add Project"}
+          </Button>
+        </Stack>
+      </Box>
     </Dialog>
   );
 }
